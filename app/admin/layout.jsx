@@ -38,6 +38,7 @@ export default function AdminLayout({ children }) {
     <div className="max-w-4xl mx-auto px-6 py-10">
       <h1 className="font-display text-3xl mb-6">Admin</h1>
       <div className="flex gap-5 text-sm border-b border-ink/10 mb-8">
+        <a href="/admin" className="pb-3 hover:text-clay">Overview</a>
         <a href="/admin/users" className="pb-3 hover:text-clay">Users</a>
         <a href="/admin/stores" className="pb-3 hover:text-clay">Stores</a>
         <a href="/admin/posts" className="pb-3 hover:text-clay">Posts</a>
