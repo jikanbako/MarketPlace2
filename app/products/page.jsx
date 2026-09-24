@@ -1,52 +1,80 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+
+function useDebounced(value, delay = 350) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState(['all']);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
+  const debouncedQuery = useDebounced(query);
+
+  // Load the full category list once, independent of search/filter state
+  useEffect(() => {
+    async function loadCategories() {
+      const { data } = await supabase.from('products').select('category');
+      const set = new Set((data || []).map((p) => p.category).filter(Boolean));
+      setCategories(['all', ...Array.from(set)]);
+    }
+    loadCategories();
+  }, []);
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase
+      setLoading(true);
+
+      let request = supabase
         .from('products')
         .select('*, stores(id, name)')
         .order('created_at', { ascending: false });
-      setProducts(data || []);
+
+      if (debouncedQuery.trim()) {
+        // Postgres full-text search against title/category/description,
+        // with prefix matching so partial words still hit while typing.
+        const terms = debouncedQuery
+          .trim()
+          .split(/\s+/)
+          .map((t) => `${t}:*`)
+          .join(' & ');
+        request = request.textSearch('fts', terms, { config: 'english' });
+      }
+
+      if (category !== 'all') {
+        request = request.eq('category', category);
+      }
+
+      const { data, error } = await request;
+
+      // Fallback: if the FTS query syntax errors for any reason, don't
+      // leave the user with a blank screen — just show unfiltered results.
+      if (error) {
+        const { data: fallback } = await supabase
+          .from('products')
+          .select('*, stores(id, name)')
+          .order('created_at', { ascending: false });
+        setProducts(fallback || []);
+      } else {
+        setProducts(data || []);
+      }
+
       setLoading(false);
     }
     load();
-  }, []);
+  }, [debouncedQuery, category]);
 
-  const categories = useMemo(() => {
-    const set = new Set(products.map((p) => p.category).filter(Boolean));
-    return ['all', ...Array.from(set)];
-  }, [products]);
-
-  const filtered = useMemo(() => {
-    return products.filter((p) => {
-      const matchesQuery =
-        query.trim() === '' ||
-        p.title.toLowerCase().includes(query.toLowerCase()) ||
-        p.stores?.name?.toLowerCase().includes(query.toLowerCase());
-      const matchesCategory = category === 'all' || p.category === category;
-      return matchesQuery && matchesCategory;
-    });
-  }, [products, query, category]);
-
-  if (loading) return <p className="px-6 py-16 text-center">Loading…</p>;
-
-  if (products.length === 0) {
-    return (
-      <div className="max-w-md mx-auto px-6 py-20 text-center">
-        <h1 className="font-display text-2xl mb-2">No products yet</h1>
-        <p className="text-ink/60">Be the first to list something.</p>
-        <a href="/dashboard" className="underline mt-4 inline-block">Start selling</a>
-      </div>
-    );
+  if (loading && products.length === 0) {
+    return <p className="px-6 py-16 text-center">Loading…</p>;
   }
 
   return (
@@ -74,11 +102,13 @@ export default function ProductsPage() {
         </select>
       </div>
 
-      {filtered.length === 0 ? (
-        <p className="text-ink/60">No products match that search.</p>
+      {products.length === 0 ? (
+        <p className="text-ink/60">
+          {query.trim() ? 'No products match that search.' : 'No products yet.'}
+        </p>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-          {filtered.map((product) => (
+          {products.map((product) => (
             <a
               key={product.id}
               href={`/products/${product.id}`}
