@@ -10,13 +10,19 @@ Next.js and Supabase.
 1. **Create a Supabase project** at supabase.com (free tier is fine).
 2. In the Supabase SQL editor, run `supabase/schema.sql` in full. It
    creates every table (`profiles`, `stores`, `products`, `conversations`,
-   `messages`, `posts`, `likes`, `comments`), enables Realtime on
-   `messages`, sets up like/comment count triggers, and creates a public
-   `post-media` storage bucket for post photos.
-   - If you already ran an earlier version of this file, just run the
-     **new part** at the bottom (everything from `-- Phase 4` down) —
-     re-running `create table` on existing tables will error harmlessly,
-     but it's simpler to only paste the new section.
+   `messages`, `posts`, `likes`, `comments`, `follows`), sets up full-text
+   search on products, enables Realtime on `messages`, sets up
+   like/comment count triggers, and creates a public `post-media` storage
+   bucket for post photos.
+   - **If your database already has some of these tables:** don't
+     re-run the whole file — `create table` errors on tables that
+     already exist. Instead scroll to the bottom of `schema.sql` and
+     run only the sections you haven't applied yet (they're marked
+     with comments like `-- Phase 4`, `-- Admin role support`,
+     `-- Server-side full-text search`, `-- Follow system`). Running a
+     section twice is safe for everything except `create table` — those
+     lines use `if not exists` where it matters, so when in doubt just
+     run the whole bottom half again.
 3. **To make yourself an admin:** sign up normally through `/signup`
    first, then in the Supabase SQL editor run:
    ```sql
@@ -41,17 +47,21 @@ Next.js and Supabase.
 - `/dashboard/products/new` — add a product to your store
 - `/dashboard/posts/new` — turn a product into a feed post (upload a
   photo or video, under 50MB, + caption)
-- `/products` — buyers browse all listed products, with a search bar and
-  a category filter (built client-side from existing product categories)
+- `/products` — buyers browse all listed products, with **server-side
+  full-text search** (Postgres `tsvector`, debounced as you type,
+  weighted so title matches rank above description) and a category filter
 - `/products/[id]` — individual product page with a working "Message
   seller" button that starts or resumes a conversation
-- `/stores/[id]` — public store page listing everything that store sells
+- `/stores/[id]` — public store page listing everything that store sells,
+  with a **Follow/Following** button and live follower count
 - `/messages` — inbox of all your conversations
 - `/messages/[id]` — a real-time chat thread (Supabase Realtime) with
   a seller or buyer
 - `/feed` — TikTok-style vertical swipe feed of photo and video posts
   (video autoplays muted/looped only while it's the one on screen), with
-  likes (heart, live count) and a comments panel that slides up
+  **"For you" / "Following" tabs** (Following shows only posts from
+  stores you follow), likes (heart, live count), and a comments panel
+  that slides up
 - `/admin` — admin-only dashboard (guarded by role check + RLS):
   - Overview — live counts (users, banned users, stores, stores awaiting
     verification, posts), each linking to the relevant tab
@@ -69,10 +79,7 @@ Next.js and Supabase.
 - Video compression/thumbnails — uploads go straight to storage as-is,
   with a 50MB cap enforced client-side to keep things reasonable, but
   there's no server-side transcoding (fine for MVP, revisit before scale)
-- Server-side/full-text search once product volume grows past what
-  client-side filtering handles well
 - Read receipts / unread counts / push notifications for messages
-- Follow system (following stores, personalized feed ordering)
 - The `banned` flag on a user is stored but not yet enforced anywhere
   (e.g. blocking login or posting) — add that check where needed once
   you decide what a banned user should be prevented from doing
