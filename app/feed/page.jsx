@@ -1,12 +1,31 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
 function PostCard({ post, user, onOpenComments }) {
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likes_count);
   const [busy, setBusy] = useState(false);
+  const videoRef = useRef(null);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (post.media_type !== 'video' || !videoRef.current || !containerRef.current) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          videoRef.current?.play().catch(() => {});
+        } else {
+          videoRef.current?.pause();
+        }
+      },
+      { threshold: 0.6 }
+    );
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [post.media_type]);
 
   useEffect(() => {
     async function checkLiked() {
@@ -39,12 +58,30 @@ function PostCard({ post, user, onOpenComments }) {
   }
 
   return (
-    <div className="relative h-[calc(100vh-64px)] snap-start flex items-center justify-center bg-ink">
-      <img
-        src={post.media_url}
-        alt={post.caption || post.products?.title}
-        className="max-h-full max-w-full object-contain"
-      />
+    <div
+      ref={containerRef}
+      className="relative h-[calc(100vh-64px)] snap-start flex items-center justify-center bg-ink"
+    >
+      {post.media_type === 'video' ? (
+        <video
+          ref={videoRef}
+          src={post.media_url}
+          className="max-h-full max-w-full object-contain"
+          muted
+          loop
+          playsInline
+          onClick={(e) => {
+            if (e.currentTarget.paused) e.currentTarget.play();
+            else e.currentTarget.pause();
+          }}
+        />
+      ) : (
+        <img
+          src={post.media_url}
+          alt={post.caption || post.products?.title}
+          className="max-h-full max-w-full object-contain"
+        />
+      )}
 
       <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/70 to-transparent text-sand">
         <a href={`/stores/${post.store_id}`} className="text-sm font-medium hover:underline">
