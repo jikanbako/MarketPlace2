@@ -32,7 +32,11 @@ export default function AdminPostsPage() {
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {posts.map((p) => (
         <div key={p.id} className="border border-ink/10 rounded-lg overflow-hidden">
-          <img src={p.media_url} alt={p.caption} className="w-full h-32 object-cover" />
+          {p.media_type === 'video' ? (
+            <video src={p.media_url} className="w-full h-32 object-cover" muted />
+          ) : (
+            <img src={p.media_url} alt={p.caption} className="w-full h-32 object-cover" />
+          )}
           <div className="p-2">
             <p className="text-xs text-ink/60 mb-2">{p.stores?.name}</p>
             <button
