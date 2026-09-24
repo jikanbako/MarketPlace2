@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function AdminLayout({ children }) {
   const [status, setStatus] = useState('loading'); // loading | allowed | denied
