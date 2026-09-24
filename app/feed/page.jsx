@@ -60,7 +60,7 @@ function PostCard({ post, user, onOpenComments }) {
   return (
     <div
       ref={containerRef}
-      className="relative h-[calc(100vh-64px)] snap-start flex items-center justify-center bg-ink"
+      className="relative h-[calc(100vh-112px)] snap-start flex items-center justify-center bg-ink"
     >
       {post.media_type === 'video' ? (
         <video
@@ -192,6 +192,8 @@ export default function FeedPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeComments, setActiveComments] = useState(null);
+  const [tab, setTab] = useState('forYou'); // 'forYou' | 'following'
+  const [followedStoreIds, setFollowedStoreIds] = useState([]);
 
   useEffect(() => {
     async function load() {
@@ -203,10 +205,24 @@ export default function FeedPage() {
         .select('*, stores(name), products(title, price)')
         .order('created_at', { ascending: false });
       setPosts(data || []);
+
+      if (currentUser) {
+        const { data: follows } = await supabase
+          .from('follows')
+          .select('followed_store_id')
+          .eq('follower_id', currentUser.id);
+        setFollowedStoreIds((follows || []).map((f) => f.followed_store_id));
+      }
+
       setLoading(false);
     }
     load();
   }, []);
+
+  const visiblePosts =
+    tab === 'following'
+      ? posts.filter((p) => followedStoreIds.includes(p.store_id))
+      : posts;
 
   if (loading) return <p className="px-6 py-16 text-center">Loading…</p>;
 
@@ -222,16 +238,41 @@ export default function FeedPage() {
 
   return (
     <>
-      <div className="h-[calc(100vh-64px)] overflow-y-scroll snap-y snap-mandatory">
-        {posts.map((post) => (
-          <PostCard
-            key={post.id}
-            post={post}
-            user={user}
-            onOpenComments={setActiveComments}
-          />
-        ))}
+      <div className="flex justify-center gap-6 text-sm border-b border-ink/10 py-3 bg-sand relative z-10">
+        <button
+          onClick={() => setTab('forYou')}
+          className={tab === 'forYou' ? 'text-ink font-medium' : 'text-ink/50'}
+        >
+          For you
+        </button>
+        <button
+          onClick={() => setTab('following')}
+          className={tab === 'following' ? 'text-ink font-medium' : 'text-ink/50'}
+        >
+          Following
+        </button>
       </div>
+
+      {visiblePosts.length === 0 ? (
+        <div className="max-w-md mx-auto px-6 py-20 text-center">
+          <p className="text-ink/60">
+            {user
+              ? "No posts from stores you follow yet."
+              : 'Log in to follow stores and see their posts here.'}
+          </p>
+        </div>
+      ) : (
+        <div className="h-[calc(100vh-112px)] overflow-y-scroll snap-y snap-mandatory">
+          {visiblePosts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              user={user}
+              onOpenComments={setActiveComments}
+            />
+          ))}
+        </div>
+      )}
       {activeComments && (
         <CommentsPanel
           post={activeComments}
