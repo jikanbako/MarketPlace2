@@ -298,3 +298,38 @@ create policy "Admins can delete any comment"
 
 -- To make your first admin, run (after signing up normally):
 -- update profiles set role = 'admin' where id = (select id from auth.users where email = 'you@example.com');
+
+-- Server-side full-text search
+-- A generated tsvector column, weighted (title matters more than
+-- description/category), plus a GIN index for fast search.
+alter table products add column if not exists fts tsvector
+  generated always as (
+    setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
+    setweight(to_tsvector('english', coalesce(category, '')), 'B') ||
+    setweight(to_tsvector('english', coalesce(description, '')), 'C')
+  ) stored;
+
+create index if not exists products_fts_idx on products using gin (fts);
+
+-- Also let search match by store name via a view that joins stores in
+create or replace view searchable_products as
+  select p.*, s.name as store_name
+  from products p
+  join stores s on s.id = p.store_id;
+
+-- Follow system
+create table follows (
+  follower_id uuid references profiles(id) on delete cascade not null,
+  followed_store_id uuid references stores(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  primary key (follower_id, followed_store_id)
+);
+
+alter table follows enable row level security;
+
+create policy "Follows are viewable by everyone"
+  on follows for select using (true);
+create policy "Users can follow a store"
+  on follows for insert with check (auth.uid() = follower_id);
+create policy "Users can unfollow a store"
+  on follows for delete using (auth.uid() = follower_id);
