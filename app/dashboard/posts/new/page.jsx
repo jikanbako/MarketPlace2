@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from "../../../../lib/supabaseClient";
+import { supabase } from '../../../lib/supabaseClient';
 
 export default function NewPostPage() {
   const router = useRouter();
@@ -42,7 +42,11 @@ export default function NewPostPage() {
     setError(null);
 
     if (!file) {
-      setError('Choose a photo to post.');
+      setError('Choose a photo or video to post.');
+      return;
+    }
+    if (file.type.startsWith('video/') && file.size > 50 * 1024 * 1024) {
+      setError('Video is too large — keep it under 50MB for now.');
       return;
     }
     if (!productId) {
@@ -52,6 +56,7 @@ export default function NewPostPage() {
 
     setSaving(true);
 
+    const isVideo = file.type.startsWith('video/');
     const ext = file.name.split('.').pop();
     const path = `${store.id}/${Date.now()}.${ext}`;
 
@@ -73,7 +78,7 @@ export default function NewPostPage() {
       product_id: productId,
       store_id: store.id,
       media_url: publicUrl,
-      media_type: 'photo',
+      media_type: isVideo ? 'video' : 'photo',
       caption,
     });
 
@@ -124,10 +129,10 @@ export default function NewPostPage() {
           </select>
         </div>
         <div>
-          <label className="block text-sm mb-1">Photo</label>
+          <label className="block text-sm mb-1">Photo or video</label>
           <input
             type="file"
-            accept="image/*"
+            accept="image/*,video/*"
             onChange={(e) => setFile(e.target.files?.[0] || null)}
             className="w-full text-sm"
           />
@@ -151,7 +156,7 @@ export default function NewPostPage() {
         </button>
       </form>
       <p className="text-xs text-ink/50 mt-4">
-        Video posts come in a later update — photos only for now.
+        Videos autoplay muted in the feed, like TikTok — keep them under 50MB.
       </p>
     </div>
   );
