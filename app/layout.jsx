@@ -1,7 +1,7 @@
 import './globals.css';
 
 import './globals.css';
-import NavBar from '../components/NavBar';
+import NavBar from '@/components/NavBar';
 
 export const metadata = {
   title: 'BuyLink',
