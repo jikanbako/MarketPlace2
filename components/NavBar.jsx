@@ -13,12 +13,14 @@ const LINKS = [
 
 export default function NavBar() {
   const [isAdmin, setIsAdmin] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    async function checkRole() {
+    async function checkSession() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      setLoggedIn(true);
       const { data: profile } = await supabase
         .from('profiles')
         .select('role')
@@ -26,8 +28,18 @@ export default function NavBar() {
         .single();
       setIsAdmin(profile?.role === 'admin');
     }
-    checkRole();
+    checkSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setLoggedIn(!!session?.user);
+      if (!session?.user) setIsAdmin(false);
+    });
+    return () => listener.subscription.unsubscribe();
   }, []);
+
+  const accountLink = loggedIn
+    ? { href: '/settings', label: 'Settings' }
+    : { href: '/login', label: 'Log in' };
 
   return (
     <nav className="relative border-b border-ink/10">
@@ -46,8 +58,8 @@ export default function NavBar() {
               Admin
             </a>
           )}
-          <a href="/login" className="hover:text-clay whitespace-nowrap">
-            Log in
+          <a href={accountLink.href} className="hover:text-clay whitespace-nowrap">
+            {accountLink.label}
           </a>
         </div>
 
@@ -86,11 +98,11 @@ export default function NavBar() {
             </a>
           )}
           <a
-            href="/login"
+            href={accountLink.href}
             onClick={() => setMenuOpen(false)}
             className="py-2.5 text-sm hover:text-clay"
           >
-            Log in
+            {accountLink.label}
           </a>
         </div>
       )}
