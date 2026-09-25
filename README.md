@@ -55,6 +55,10 @@ Next.js and Supabase.
 - `/stores/[id]` — public store page listing everything that store sells,
   with a **Follow/Following** button and live follower count
 - `/messages` — inbox of all your conversations
+- `/settings` — edit your name and location, change your password, log out
+- The nav bar now reflects whether you're logged in: shows "Settings"
+  when logged in, "Log in" when not (previously always showed "Log in"
+  regardless of session)
 - `/messages/[id]` — a real-time chat thread (Supabase Realtime) with
   a seller or buyer
 - `/feed` — TikTok-style vertical swipe feed of photo and video posts
@@ -65,7 +69,10 @@ Next.js and Supabase.
 - `/admin` — admin-only dashboard (guarded by role check + RLS):
   - Overview — live counts (users, banned users, stores, stores awaiting
     verification, posts), each linking to the relevant tab
-  - `/admin/users` — ban/unban any user
+  - `/admin/users` — ban/unban any user. Banning actually blocks
+    them now (enforced via RLS): a banned user can still log in and
+    browse, but can't create a store/product, post, comment, like,
+    follow, or message — with a banner explaining why
   - `/admin/stores` — verify/unverify sellers
   - `/admin/posts` — delete posts off the feed
 - Logging in now routes by role: admins land on `/admin`, sellers land
@@ -80,9 +87,6 @@ Next.js and Supabase.
   with a 50MB cap enforced client-side to keep things reasonable, but
   there's no server-side transcoding (fine for MVP, revisit before scale)
 - Read receipts / unread counts / push notifications for messages
-- The `banned` flag on a user is stored but not yet enforced anywhere
-  (e.g. blocking login or posting) — add that check where needed once
-  you decide what a banned user should be prevented from doing
 
 ## Notes
 
