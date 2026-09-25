@@ -1,7 +1,6 @@
 import './globals.css';
-
-import './globals.css';
 import NavBar from '@/components/NavBar';
+import BannedBanner from '@/components/BannedBanner';
 
 export const metadata = {
   title: 'BuyLink',
@@ -24,6 +23,7 @@ export default function RootLayout({ children }) {
       </head>
       <body className="font-body min-h-screen">
         <NavBar />
+        <BannedBanner />
         <main>{children}</main>
       </body>
     </html>
