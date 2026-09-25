@@ -333,3 +333,76 @@ create policy "Users can follow a store"
   on follows for insert with check (auth.uid() = follower_id);
 create policy "Users can unfollow a store"
   on follows for delete using (auth.uid() = follower_id);
+
+-- Enforce the banned flag: block a banned user from creating new
+-- content anywhere in the app, at the database level (RLS), not just
+-- in the UI. Reading/browsing still works — only new writes are blocked.
+create or replace function public.is_banned()
+returns boolean as $$
+  select coalesce(
+    (select banned from profiles where id = auth.uid()),
+    false
+  );
+$$ language sql security definer set search_path = public;
+
+-- Stores: banned users can't open a new store
+drop policy if exists "Owners can insert their own store" on stores;
+create policy "Owners can insert their own store"
+  on stores for insert
+  with check (auth.uid() = owner_id and not is_banned());
+
+-- Products: banned sellers can't add products
+drop policy if exists "Store owners can insert products" on products;
+create policy "Store owners can insert products"
+  on products for insert
+  with check (
+    auth.uid() = (select owner_id from stores where id = store_id)
+    and not is_banned()
+  );
+
+-- Posts: banned sellers can't post to the feed
+drop policy if exists "Store owners can insert posts" on posts;
+create policy "Store owners can insert posts"
+  on posts for insert
+  with check (
+    auth.uid() = (select owner_id from stores where id = store_id)
+    and not is_banned()
+  );
+
+-- Comments: banned users can't comment
+drop policy if exists "Users can add comments" on comments;
+create policy "Users can add comments"
+  on comments for insert
+  with check (auth.uid() = user_id and not is_banned());
+
+-- Likes: banned users can't like posts
+drop policy if exists "Users can like a post" on likes;
+create policy "Users can like a post"
+  on likes for insert
+  with check (auth.uid() = user_id and not is_banned());
+
+-- Conversations: banned users can't start new conversations
+drop policy if exists "Buyers can start a conversation" on conversations;
+create policy "Buyers can start a conversation"
+  on conversations for insert
+  with check (auth.uid() = buyer_id and not is_banned());
+
+-- Messages: banned users can't send messages (even in existing threads)
+drop policy if exists "Participants can send messages" on messages;
+create policy "Participants can send messages"
+  on messages for insert
+  with check (
+    auth.uid() = sender_id
+    and not is_banned()
+    and auth.uid() in (
+      select buyer_id from conversations where id = conversation_id
+      union
+      select seller_id from conversations where id = conversation_id
+    )
+  );
+
+-- Follows: banned users can't follow stores
+drop policy if exists "Users can follow a store" on follows;
+create policy "Users can follow a store"
+  on follows for insert
+  with check (auth.uid() = follower_id and not is_banned());
