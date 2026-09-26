@@ -69,9 +69,10 @@ Next.js and Supabase.
 - `/feed` — TikTok-style vertical swipe feed of photo and video posts
   (video autoplays muted/looped only while it's the one on screen), with
   **"For you" / "Following" tabs** (Following shows only posts from
-  stores you follow), a **+ Follow button right next to each store's
-  name** so you can follow without leaving the feed, likes (heart, live
-  count), and a comments panel that slides up
+  stores you follow), a right-side icon column like TikTok's — **Follow
+  (+/✓)**, **Like** (heart, live count), **Comment** (slides up a panel),
+  and **Message** (starts/resumes a conversation with the seller,
+  without leaving the feed) — plus store name and caption at bottom-left
 - `/admin` — admin-only dashboard (guarded by role check + RLS):
   - Overview — live counts (users, banned users, stores, stores awaiting
     verification, posts), each linking to the relevant tab
