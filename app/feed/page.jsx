@@ -69,6 +69,38 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow }) {
     setFollowBusy(false);
   }
 
+  async function handleMessage() {
+    if (!user) {
+      window.location.href = '/login';
+      return;
+    }
+    const sellerId = post.stores?.owner_id;
+    if (!sellerId || sellerId === user.id) return;
+
+    const { data: existing } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('buyer_id', user.id)
+      .eq('seller_id', sellerId)
+      .eq('product_id', post.product_id || null)
+      .maybeSingle();
+
+    if (existing) {
+      window.location.href = `/messages/${existing.id}`;
+      return;
+    }
+
+    const { data: created, error } = await supabase
+      .from('conversations')
+      .insert({ buyer_id: user.id, seller_id: sellerId, product_id: post.product_id || null })
+      .select()
+      .single();
+
+    if (!error && created) {
+      window.location.href = `/messages/${created.id}`;
+    }
+  }
+
   return (
     <div
       ref={containerRef}
@@ -96,22 +128,9 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow }) {
       )}
 
       <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/70 to-transparent text-sand">
-        <div className="flex items-center gap-2">
-          <a href={`/stores/${post.store_id}`} className="text-sm font-medium hover:underline">
-            {post.stores?.name}
-          </a>
-          {user?.id !== post.stores?.owner_id && (
-            <button
-              onClick={handleFollow}
-              disabled={followBusy}
-              className={`text-xs px-2.5 py-1 rounded-full disabled:opacity-50 ${
-                isFollowing ? 'border border-sand/60 text-sand' : 'bg-sand text-ink'
-              }`}
-            >
-              {isFollowing ? 'Following' : '+ Follow'}
-            </button>
-          )}
-        </div>
+        <a href={`/stores/${post.store_id}`} className="text-sm font-medium hover:underline">
+          {post.stores?.name}
+        </a>
         <p className="text-sm mt-1">{post.caption}</p>
         {post.product_id && (
           <a
@@ -124,6 +143,22 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow }) {
       </div>
 
       <div className="absolute right-3 bottom-24 flex flex-col items-center gap-5 text-sand">
+        {user?.id !== post.stores?.owner_id && (
+          <button
+            onClick={handleFollow}
+            disabled={followBusy}
+            className="flex flex-col items-center gap-1 disabled:opacity-50"
+          >
+            <span
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-lg ${
+                isFollowing ? 'border border-sand/60' : 'bg-sand text-ink'
+              }`}
+            >
+              {isFollowing ? '✓' : '+'}
+            </span>
+            <span className="text-xs">{isFollowing ? 'Following' : 'Follow'}</span>
+          </button>
+        )}
         <button onClick={toggleLike} className="flex flex-col items-center gap-1">
           <span className={`text-2xl ${liked ? 'text-clay' : ''}`}>{liked ? '♥' : '♡'}</span>
           <span className="text-xs">{likesCount}</span>
@@ -132,6 +167,12 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow }) {
           <span className="text-2xl">💬</span>
           <span className="text-xs">{post.comments_count}</span>
         </button>
+        {user?.id !== post.stores?.owner_id && (
+          <button onClick={handleMessage} className="flex flex-col items-center gap-1">
+            <span className="text-2xl">✉️</span>
+            <span className="text-xs">Message</span>
+          </button>
+        )}
       </div>
     </div>
   );
