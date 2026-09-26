@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
-function PostCard({ post, user, onOpenComments }) {
+function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow }) {
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likes_count);
   const [busy, setBusy] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
   const videoRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -57,6 +58,17 @@ function PostCard({ post, user, onOpenComments }) {
     setBusy(false);
   }
 
+  async function handleFollow() {
+    if (!user) {
+      window.location.href = '/login';
+      return;
+    }
+    if (followBusy) return;
+    setFollowBusy(true);
+    await onToggleFollow(post.store_id, isFollowing);
+    setFollowBusy(false);
+  }
+
   return (
     <div
       ref={containerRef}
@@ -84,9 +96,22 @@ function PostCard({ post, user, onOpenComments }) {
       )}
 
       <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/70 to-transparent text-sand">
-        <a href={`/stores/${post.store_id}`} className="text-sm font-medium hover:underline">
-          {post.stores?.name}
-        </a>
+        <div className="flex items-center gap-2">
+          <a href={`/stores/${post.store_id}`} className="text-sm font-medium hover:underline">
+            {post.stores?.name}
+          </a>
+          {user?.id !== post.stores?.owner_id && (
+            <button
+              onClick={handleFollow}
+              disabled={followBusy}
+              className={`text-xs px-2.5 py-1 rounded-full disabled:opacity-50 ${
+                isFollowing ? 'border border-sand/60 text-sand' : 'bg-sand text-ink'
+              }`}
+            >
+              {isFollowing ? 'Following' : '+ Follow'}
+            </button>
+          )}
+        </div>
         <p className="text-sm mt-1">{post.caption}</p>
         <a
           href={`/products/${post.product_id}`}
@@ -202,7 +227,7 @@ export default function FeedPage() {
 
       const { data } = await supabase
         .from('posts')
-        .select('*, stores(name), products(title, price)')
+        .select('*, stores(name, owner_id), products(title, price)')
         .order('created_at', { ascending: false });
       setPosts(data || []);
 
@@ -223,6 +248,22 @@ export default function FeedPage() {
     tab === 'following'
       ? posts.filter((p) => followedStoreIds.includes(p.store_id))
       : posts;
+
+  async function handleToggleFollow(storeId, isFollowing) {
+    if (isFollowing) {
+      await supabase
+        .from('follows')
+        .delete()
+        .eq('follower_id', user.id)
+        .eq('followed_store_id', storeId);
+      setFollowedStoreIds((ids) => ids.filter((id) => id !== storeId));
+    } else {
+      await supabase
+        .from('follows')
+        .insert({ follower_id: user.id, followed_store_id: storeId });
+      setFollowedStoreIds((ids) => [...ids, storeId]);
+    }
+  }
 
   if (loading) return <p className="px-6 py-16 text-center">Loading…</p>;
 
@@ -269,6 +310,8 @@ export default function FeedPage() {
               post={post}
               user={user}
               onOpenComments={setActiveComments}
+              isFollowing={followedStoreIds.includes(post.store_id)}
+              onToggleFollow={handleToggleFollow}
             />
           ))}
         </div>
@@ -282,4 +325,4 @@ export default function FeedPage() {
       )}
     </>
   );
-}
+          }
