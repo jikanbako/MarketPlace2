@@ -8,7 +8,7 @@ export default function NewPostPage() {
   const router = useRouter();
   const [store, setStore] = useState(null);
   const [products, setProducts] = useState([]);
-  const [productId, setProductId] = useState('');
+  const [productId, setProductId] = useState(''); // '' = no product attached
   const [caption, setCaption] = useState('');
   const [file, setFile] = useState(null);
   const [error, setError] = useState(null);
@@ -49,10 +49,6 @@ export default function NewPostPage() {
       setError('Video is too large — keep it under 50MB for now.');
       return;
     }
-    if (!productId) {
-      setError('Pick which product this post is for.');
-      return;
-    }
 
     setSaving(true);
 
@@ -75,7 +71,7 @@ export default function NewPostPage() {
       .getPublicUrl(path);
 
     const { error: insertError } = await supabase.from('posts').insert({
-      product_id: productId,
+      product_id: productId || null,
       store_id: store.id,
       media_url: publicUrl,
       media_type: isVideo ? 'video' : 'photo',
@@ -101,32 +97,27 @@ export default function NewPostPage() {
     );
   }
 
-  if (products.length === 0) {
-    return (
-      <div className="max-w-md mx-auto px-6 py-20 text-center">
-        <h1 className="font-display text-2xl mb-2">Add a product first</h1>
-        <p className="text-ink/60 mb-4">A post needs a product behind it.</p>
-        <a href="/dashboard/products/new" className="underline">Add a product</a>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-md mx-auto px-6 py-16">
       <h1 className="font-display text-3xl mb-6">New post</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm mb-1">Product</label>
+          <label className="block text-sm mb-1">Product (optional)</label>
           <select
             value={productId}
             onChange={(e) => setProductId(e.target.value)}
             className="w-full border border-ink/20 rounded-md px-3 py-2"
           >
-            <option value="">Select a product…</option>
+            <option value="">No product — just an update</option>
             {products.map((p) => (
               <option key={p.id} value={p.id}>{p.title}</option>
             ))}
           </select>
+          <p className="text-xs text-ink/50 mt-1">
+            Link a product to sell directly from this post, or leave it
+            blank for a store update, new-arrivals teaser, or behind-the-
+            scenes content.
+          </p>
         </div>
         <div>
           <label className="block text-sm mb-1">Photo or video</label>
