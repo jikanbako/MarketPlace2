@@ -472,3 +472,12 @@ drop trigger if exists on_store_update_check_verification on stores;
 create trigger on_store_update_check_verification
   before update on stores
   for each row execute function public.enforce_store_verification_columns();
+
+-- Allow standalone store posts (no product attached) — store updates,
+-- "new arrivals this week," behind-the-scenes content, etc. A post now
+-- only requires a store_id; product_id is optional.
+alter table posts alter column product_id drop not null;
+
+-- The insert policy already only checks store ownership (not product_id
+-- at all), so no RLS change is needed — this is purely a column
+-- constraint change.
