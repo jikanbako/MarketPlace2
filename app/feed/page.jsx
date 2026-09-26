@@ -113,12 +113,14 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow }) {
           )}
         </div>
         <p className="text-sm mt-1">{post.caption}</p>
-        <a
-          href={`/products/${post.product_id}`}
-          className="inline-block mt-2 text-xs px-3 py-1.5 bg-sand text-ink rounded-full"
-        >
-          View product · ₦{Number(post.products?.price || 0).toLocaleString()}
-        </a>
+        {post.product_id && (
+          <a
+            href={`/products/${post.product_id}`}
+            className="inline-block mt-2 text-xs px-3 py-1.5 bg-sand text-ink rounded-full"
+          >
+            View product · ₦{Number(post.products?.price || 0).toLocaleString()}
+          </a>
+        )}
       </div>
 
       <div className="absolute right-3 bottom-24 flex flex-col items-center gap-5 text-sand">
@@ -325,4 +327,4 @@ export default function FeedPage() {
       )}
     </>
   );
-          }
+}
