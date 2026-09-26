@@ -7,4 +7,6 @@
 body {
   background-color: #F6F1E9;
   color: #171310;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
