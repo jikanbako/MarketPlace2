@@ -3,6 +3,7 @@ import NavBar from '@/components/NavBar';
 import BannedBanner from '@/components/BannedBanner';
 import RegisterServiceWorker from '@/components/RegisterServiceWorker';
 import InstallPrompt from '@/components/InstallPrompt';
+import BottomNav from '@/components/BottomNav';
 
 export const viewport = {
   width: 'device-width',
@@ -48,7 +49,8 @@ export default function RootLayout({ children }) {
         <NavBar />
         <InstallPrompt />
         <BannedBanner />
-        <main>{children}</main>
+        <main className="pb-16 md:pb-0">{children}</main>
+        <BottomNav />
       </body>
     </html>
   );
