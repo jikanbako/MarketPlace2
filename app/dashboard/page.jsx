@@ -119,9 +119,17 @@ export default function DashboardPage() {
     );
   }
 
+  const VERIFICATION_BADGE = {
+    none: { text: 'Not verified', color: 'text-ink/50' },
+    pending: { text: 'Verification pending', color: 'text-ink/60' },
+    approved: { text: 'Verified ✓', color: 'text-moss' },
+    rejected: { text: 'Verification rejected', color: 'text-clay' },
+  };
+  const badge = VERIFICATION_BADGE[store.verification_status] || VERIFICATION_BADGE.none;
+
   return (
     <div className="max-w-2xl mx-auto px-6 py-16">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-2">
         <div>
           <h1 className="font-display text-3xl">{store.name}</h1>
           <p className="text-ink/60 text-sm">{store.category}</p>
@@ -133,7 +141,10 @@ export default function DashboardPage() {
           + Add product
         </a>
       </div>
-      <p className="text-ink/70">{store.description}</p>
+      <a href="/dashboard/verify" className={`text-sm underline ${badge.color}`}>
+        {badge.text}
+      </a>
+      <p className="text-ink/70 mt-4">{store.description}</p>
     </div>
   );
 }
