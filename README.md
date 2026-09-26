@@ -47,6 +47,9 @@ Next.js and Supabase.
 - `/dashboard/products/new` — add a product to your store
 - `/dashboard/posts/new` — turn a product into a feed post (upload a
   photo or video, under 50MB, + caption)
+- `/dashboard/verify` — sellers submit a government ID + proof of
+  business for review; shows status (none/pending/approved/rejected)
+  and the admin's note if rejected
 - `/products` — buyers browse all listed products, with **server-side
   full-text search** (Postgres `tsvector`, debounced as you type,
   weighted so title matches rank above description) and a category filter
@@ -64,8 +67,9 @@ Next.js and Supabase.
 - `/feed` — TikTok-style vertical swipe feed of photo and video posts
   (video autoplays muted/looped only while it's the one on screen), with
   **"For you" / "Following" tabs** (Following shows only posts from
-  stores you follow), likes (heart, live count), and a comments panel
-  that slides up
+  stores you follow), a **+ Follow button right next to each store's
+  name** so you can follow without leaving the feed, likes (heart, live
+  count), and a comments panel that slides up
 - `/admin` — admin-only dashboard (guarded by role check + RLS):
   - Overview — live counts (users, banned users, stores, stores awaiting
     verification, posts), each linking to the relevant tab
@@ -73,7 +77,11 @@ Next.js and Supabase.
     them now (enforced via RLS): a banned user can still log in and
     browse, but can't create a store/product, post, comment, like,
     follow, or message — with a banner explaining why
-  - `/admin/stores` — verify/unverify sellers
+  - `/admin/stores` — a **pending verification queue** at the top:
+    review submitted ID/business proof documents (opened via short-lived
+    signed URLs, since the storage bucket is private) and approve or
+    reject with a reason. Below that, a manual verify/unverify toggle
+    for any store, for cases outside the formal flow
   - `/admin/posts` — delete posts off the feed
 - Logging in now routes by role: admins land on `/admin`, sellers land
   on `/dashboard`, buyers land on `/feed`. An "Admin" link also appears
