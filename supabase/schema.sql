@@ -406,3 +406,69 @@ drop policy if exists "Users can follow a store" on follows;
 create policy "Users can follow a store"
   on follows for insert
   with check (auth.uid() = follower_id and not is_banned());
+
+-- Seller verification submissions
+alter table stores add column if not exists verification_status text
+  default 'none' check (verification_status in ('none', 'pending', 'approved', 'rejected'));
+alter table stores add column if not exists id_document_url text;
+alter table stores add column if not exists business_proof_url text;
+alter table stores add column if not exists verification_note text;
+alter table stores add column if not exists verification_submitted_at timestamptz;
+
+-- Private bucket for verification documents — NOT public, unlike post-media.
+-- Only the store owner and admins can ever read these files.
+insert into storage.buckets (id, name, public)
+values ('verification-docs', 'verification-docs', false)
+on conflict (id) do nothing;
+
+-- Files are stored under a path like {user_id}/{store_id}/id-document.jpg
+-- so the policy can check ownership from the path itself, without a
+-- separate lookup table.
+create policy "Owners can upload their own verification docs"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'verification-docs'
+    and auth.uid()::text = (storage.foldername(name))[1]
+    and not is_banned()
+  );
+
+create policy "Owners and admins can view verification docs"
+  on storage.objects for select
+  using (
+    bucket_id = 'verification-docs'
+    and (auth.uid()::text = (storage.foldername(name))[1] or is_admin())
+  );
+
+-- Sellers can set their own store to 'pending' on submission, but only
+-- admins can move it to 'approved'/'rejected' (enforced in the app —
+-- Postgres check constraints can't easily distinguish who's setting
+-- which value, so the admin UI is the only place approve/reject happens
+-- and RLS already restricts stores.update to the owner or an admin).
+
+-- Close a gap: the existing "owners can update their own store" RLS
+-- policy allows updating ANY column on a store they own — including
+-- verification_status and verified. Without this trigger, a seller
+-- could approve their own verification via a direct API call, bypassing
+-- the admin review entirely. This trigger blocks that: non-admins may
+-- only move verification_status into 'pending' (submitting/resubmitting),
+-- never into 'approved'/'rejected', and can never touch `verified` at all.
+create or replace function public.enforce_store_verification_columns()
+returns trigger as $$
+begin
+  if not is_admin() then
+    if new.verification_status is distinct from old.verification_status
+       and new.verification_status <> 'pending' then
+      raise exception 'Only admins can set verification status to %', new.verification_status;
+    end if;
+    if new.verified is distinct from old.verified then
+      raise exception 'Only admins can change the verified flag';
+    end if;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists on_store_update_check_verification on stores;
+create trigger on_store_update_check_verification
+  before update on stores
+  for each row execute function public.enforce_store_verification_columns();
