@@ -104,7 +104,7 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow }) {
   return (
     <div
       ref={containerRef}
-      className="relative h-[calc(100vh-112px)] snap-start flex items-center justify-center bg-ink"
+      className="relative h-[calc(100vh-176px)] md:h-[calc(100vh-112px)] snap-start flex items-center justify-center bg-ink"
     >
       {post.media_type === 'video' ? (
         <video
@@ -346,7 +346,7 @@ export default function FeedPage() {
           </p>
         </div>
       ) : (
-        <div className="h-[calc(100vh-112px)] overflow-y-scroll snap-y snap-mandatory">
+        <div className="h-[calc(100vh-176px)] md:h-[calc(100vh-112px)] overflow-y-scroll snap-y snap-mandatory">
           {visiblePosts.map((post) => (
             <PostCard
               key={post.id}
