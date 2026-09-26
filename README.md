@@ -46,7 +46,9 @@ Next.js and Supabase.
 - `/dashboard` — sellers create their store here
 - `/dashboard/products/new` — add a product to your store
 - `/dashboard/posts/new` — turn a product into a feed post (upload a
-  photo or video, under 50MB, + caption)
+  photo or video, under 50MB, + caption), **or post without a product**
+  for store updates, new-arrivals teasers, or behind-the-scenes content
+  — a post no longer needs a product behind it
 - `/dashboard/verify` — sellers submit a government ID + proof of
   business for review; shows status (none/pending/approved/rejected)
   and the admin's note if rejected
@@ -88,6 +90,16 @@ Next.js and Supabase.
   in the nav bar, but only when you're actually logged in as one.
 - Optional Plausible analytics — set `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` in
   `.env.local` once you have a domain; leave blank to skip for now
+- **Installable as a PWA** — `public/manifest.json` + a service worker
+  (`public/sw.js`, network-first with an offline fallback to the cached
+  shell) make BuyLink installable to a phone's home screen. An install
+  prompt banner appears automatically (Android/Chrome gets a real
+  "Install" button; iOS Safari gets "tap Share → Add to Home Screen"
+  instructions, since iOS doesn't support the install-prompt API).
+  Placeholder icons are in `public/` (`icon-192.png`, `icon-512.png`,
+  `icon-maskable-512.png`, `apple-touch-icon.png`) — swap these for a
+  real logo before you actually launch; they're currently just a "B"
+  monogram in your brand colors.
 
 ## Not yet built (later work)
 
