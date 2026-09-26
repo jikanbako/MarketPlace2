@@ -91,7 +91,10 @@ export default function StorePage() {
     <div className="max-w-5xl mx-auto px-6 py-12">
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl mb-1">{store.name}</h1>
+          <h1 className="font-display text-3xl mb-1">
+            {store.name}
+            {store.verified && <span className="text-moss text-lg ml-2" title="Verified">✓</span>}
+          </h1>
           {store.category && <p className="text-ink/60 text-sm mb-2">{store.category}</p>}
           {store.description && <p className="text-ink/70 max-w-xl mb-2">{store.description}</p>}
           <p className="text-sm text-ink/50">
