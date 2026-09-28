@@ -8,21 +8,18 @@ Next.js and Supabase.
 ## Setup
 
 1. **Create a Supabase project** at supabase.com (free tier is fine).
-2. In the Supabase SQL editor, run `supabase/schema.sql` in full. It
-   creates every table (`profiles`, `stores`, `products`, `conversations`,
-   `messages`, `posts`, `likes`, `comments`, `follows`), sets up full-text
-   search on products, enables Realtime on `messages`, sets up
-   like/comment count triggers, and creates a public `post-media` storage
-   bucket for post photos.
-   - **If your database already has some of these tables:** don't
-     re-run the whole file — `create table` errors on tables that
-     already exist. Instead scroll to the bottom of `schema.sql` and
-     run only the sections you haven't applied yet (they're marked
-     with comments like `-- Phase 4`, `-- Admin role support`,
-     `-- Server-side full-text search`, `-- Follow system`). Running a
-     section twice is safe for everything except `create table` — those
-     lines use `if not exists` where it matters, so when in doubt just
-     run the whole bottom half again.
+2. In the Supabase SQL editor, paste in the **entire** `supabase/schema.sql`
+   and run it. It creates every table, function, trigger, policy, and
+   storage bucket the app needs.
+   - **This file is safe to run in full, any time, as many times as
+     you want** — on a brand new project or one that already has some
+     of this schema. Every statement either uses `if not exists` or
+     drops-then-recreates itself, so nothing errors on a second run.
+   - **If the app ever throws an error mentioning a missing table,
+     column, function, or policy** (e.g. "column does not exist",
+     "function is_admin() does not exist"), the fix is almost always:
+     paste the whole file in and run it again. Your live database
+     just hasn't caught up to what the code expects yet.
 3. **To make yourself an admin:** sign up normally through `/signup`
    first, then in the Supabase SQL editor run:
    ```sql
@@ -30,9 +27,9 @@ Next.js and Supabase.
    where id = (select id from auth.users where email = 'you@example.com');
    ```
    Then visit `/admin` — you'll see tabs for Users, Stores, and Posts.
-3. Copy `.env.local.example` to `.env.local` and fill in your project's
+4. Copy `.env.local.example` to `.env.local` and fill in your project's
    URL and anon key (Project Settings → API in Supabase).
-4. Install dependencies and run:
+5. Install dependencies and run:
    ```
    npm install
    npm run dev
@@ -43,7 +40,18 @@ Next.js and Supabase.
 
 - `/signup` — create an account as buyer, seller, or both
 - `/login` — log in
-- `/dashboard` — sellers create their store here
+- `/dashboard` — role-aware home screen:
+  - **Sellers:** store header with verification badge, live stats
+    (followers, products, posts, likes, comments, chats), stock alerts
+    for low/out-of-stock products, a product list with working **edit
+    and delete**, a posts grid with delete, and a recent-messages
+    preview (real name + last message text, not a placeholder)
+  - **Everyone:** a "Following" section listing stores they follow
+  - **No store yet:** the create-store form appears at the bottom, so
+    a buyer can become a seller without losing anything — this was a
+    regression in an earlier draft that's now fixed
+- `/dashboard/products/[id]/edit` — edit a product's details or delete
+  it; previously products could only be created, never changed
 - `/dashboard/products/new` — add a product to your store
 - `/dashboard/posts/new` — turn a product into a feed post (upload a
   photo or video, under 50MB, + caption), **or post without a product**
@@ -64,6 +72,10 @@ Next.js and Supabase.
 - The nav bar now reflects whether you're logged in: shows "Settings"
   when logged in, "Log in" when not (previously always showed "Log in"
   regardless of session)
+- **Sticky bottom tab bar on mobile** — Home (`/dashboard`), Post
+  (`/dashboard/posts/new`), Inbox (`/messages`), Profile (`/settings`),
+  with the active tab highlighted. Only shows below Tailwind's `md`
+  breakpoint; desktop keeps using the top nav bar only.
 - `/messages/[id]` — a real-time chat thread (Supabase Realtime) with
   a seller or buyer
 - `/feed` — TikTok-style vertical swipe feed of photo and video posts
