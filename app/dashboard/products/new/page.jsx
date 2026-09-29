@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
+const MAX_PHOTOS = 5;
+
 export default function NewProductPage() {
   const router = useRouter();
   const [store, setStore] = useState(null);
@@ -14,6 +16,8 @@ export default function NewProductPage() {
     category: '',
     stock_qty: 1,
   });
+  const [files, setFiles] = useState([]); // File objects
+  const [previews, setPreviews] = useState([]); // object URLs for preview
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -31,28 +35,60 @@ export default function NewProductPage() {
     load();
   }, []);
 
+  function handleFilesSelected(e) {
+    const selected = Array.from(e.target.files || []);
+    const combined = [...files, ...selected].slice(0, MAX_PHOTOS);
+    setFiles(combined);
+    setPreviews(combined.map((f) => URL.createObjectURL(f)));
+  }
+
+  function removePhoto(index) {
+    const nextFiles = files.filter((_, i) => i !== index);
+    setFiles(nextFiles);
+    setPreviews(nextFiles.map((f) => URL.createObjectURL(f)));
+  }
+
+  async function uploadPhotos(storeId) {
+    const urls = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const ext = file.name.split('.').pop();
+      const path = `products/${storeId}/${Date.now()}-${i}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('post-media')
+        .upload(path, file);
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from('post-media').getPublicUrl(path);
+      urls.push(publicUrl);
+    }
+    return urls;
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
     setSaving(true);
 
-    const { error: insertError } = await supabase.from('products').insert({
-      store_id: store.id,
-      title: form.title,
-      description: form.description,
-      price: parseFloat(form.price),
-      category: form.category,
-      stock_qty: parseInt(form.stock_qty, 10),
-    });
+    try {
+      const photoUrls = files.length > 0 ? await uploadPhotos(store.id) : [];
 
-    setSaving(false);
+      const { error: insertError } = await supabase.from('products').insert({
+        store_id: store.id,
+        title: form.title,
+        description: form.description,
+        price: parseFloat(form.price),
+        category: form.category,
+        stock_qty: parseInt(form.stock_qty, 10),
+        photo_urls: photoUrls,
+      });
 
-    if (insertError) {
-      setError(insertError.message);
-      return;
+      if (insertError) throw insertError;
+
+      router.push('/dashboard');
+    } catch (err) {
+      setError(err.message);
     }
-
-    router.push('/dashboard');
+    setSaving(false);
   }
 
   if (!store) {
@@ -68,6 +104,37 @@ export default function NewProductPage() {
     <div className="max-w-md mx-auto px-6 py-16">
       <h1 className="font-display text-3xl mb-6">Add a product</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm mb-1">
+            Photos ({files.length}/{MAX_PHOTOS})
+          </label>
+          {previews.length > 0 && (
+            <div className="grid grid-cols-5 gap-2 mb-2">
+              {previews.map((src, i) => (
+                <div key={i} className="relative aspect-square">
+                  <img src={src} alt="" className="w-full h-full object-cover rounded-md" />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(i)}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-ink text-sand rounded-full text-xs leading-none"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {files.length < MAX_PHOTOS && (
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFilesSelected}
+              className="w-full text-sm"
+            />
+          )}
+          <p className="text-xs text-ink/50 mt-1">First photo is used as the main image.</p>
+        </div>
         <div>
           <label className="block text-sm mb-1">Title</label>
           <input
@@ -129,10 +196,6 @@ export default function NewProductPage() {
           {saving ? 'Saving…' : 'Add product'}
         </button>
       </form>
-      <p className="text-xs text-ink/50 mt-4">
-        Note: photo upload comes in Phase 2 (Discovery). This form saves the
-        product without images for now — add photo_urls once Storage is wired up.
-      </p>
     </div>
   );
 }
