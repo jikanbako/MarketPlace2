@@ -510,3 +510,199 @@ end $$;
 -- This is enforced by the enforce_store_verification_columns trigger
 -- above, closing a gap where the ordinary "owners can update their own
 -- store" policy would otherwise let a seller approve themselves.
+
+-- ============================================================
+-- PUSH NOTIFICATIONS
+-- Stores each browser's push subscription, plus a small settings
+-- table so database triggers can call out to the app's push-sending
+-- API route (via the pg_net extension) whenever something notification-
+-- worthy happens: a new message, a new follower, a new comment, or a
+-- store's verification being approved/rejected.
+-- ============================================================
+
+create extension if not exists pg_net with schema extensions;
+
+create table if not exists push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade not null,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth_key text not null,
+  created_at timestamptz default now()
+);
+
+alter table push_subscriptions enable row level security;
+
+drop policy if exists "Users can view their own push subscriptions" on push_subscriptions;
+create policy "Users can view their own push subscriptions"
+  on push_subscriptions for select using (auth.uid() = user_id);
+
+drop policy if exists "Users can add their own push subscription" on push_subscriptions;
+create policy "Users can add their own push subscription"
+  on push_subscriptions for insert with check (auth.uid() = user_id);
+
+drop policy if exists "Users can remove their own push subscription" on push_subscriptions;
+create policy "Users can remove their own push subscription"
+  on push_subscriptions for delete using (auth.uid() = user_id);
+
+-- Holds the deployed app's push-sending endpoint + a shared secret so
+-- triggers can call it. RLS is enabled with NO policies at all — this
+-- means it's completely inaccessible via the public API (PostgREST),
+-- readable only from inside security-definer trigger functions running
+-- as the database owner. Never remove RLS from this table.
+create table if not exists app_settings (
+  key text primary key,
+  value text
+);
+alter table app_settings enable row level security;
+
+-- Fill these in once after deploying — see README:
+--   update app_settings set value = 'https://your-app.vercel.app/api/send-push' where key = 'push_api_url';
+--   update app_settings set value = 'a-long-random-secret' where key = 'push_api_secret';
+insert into app_settings (key, value) values ('push_api_url', null) on conflict (key) do nothing;
+insert into app_settings (key, value) values ('push_api_secret', null) on conflict (key) do nothing;
+
+-- Calls the app's /api/send-push route with a target user + notification
+-- content. Silently does nothing if push_api_url isn't configured yet,
+-- so this is safe to have running before you've finished setup.
+create or replace function public.notify_push(
+  target_user_id uuid,
+  title text,
+  body text,
+  url text
+) returns void as $$
+declare
+  api_url text;
+  api_secret text;
+begin
+  select value into api_url from app_settings where key = 'push_api_url';
+  select value into api_secret from app_settings where key = 'push_api_secret';
+
+  if api_url is null or api_url = '' then
+    return;
+  end if;
+
+  perform net.http_post(
+    url := api_url,
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-push-secret', coalesce(api_secret, '')
+    ),
+    body := jsonb_build_object(
+      'user_id', target_user_id,
+      'title', title,
+      'body', body,
+      'url', url
+    )
+  );
+end;
+$$ language plpgsql security definer set search_path = public, extensions;
+
+-- New message → notify the recipient (not the sender)
+create or replace function public.notify_on_new_message()
+returns trigger as $$
+declare
+  convo record;
+  recipient_id uuid;
+  sender_name text;
+begin
+  select * into convo from conversations where id = new.conversation_id;
+  recipient_id := case when new.sender_id = convo.buyer_id then convo.seller_id else convo.buyer_id end;
+  select full_name into sender_name from profiles where id = new.sender_id;
+
+  perform notify_push(
+    recipient_id,
+    coalesce(sender_name, 'Someone') || ' sent you a message',
+    left(new.text, 100),
+    '/messages/' || new.conversation_id
+  );
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists on_message_notify on messages;
+create trigger on_message_notify
+  after insert on messages
+  for each row execute function public.notify_on_new_message();
+
+-- New follower → notify the store owner
+create or replace function public.notify_on_new_follow()
+returns trigger as $$
+declare
+  owner_id uuid;
+  follower_name text;
+begin
+  select owner_id into owner_id from stores where id = new.followed_store_id;
+  select full_name into follower_name from profiles where id = new.follower_id;
+
+  perform notify_push(
+    owner_id,
+    coalesce(follower_name, 'Someone') || ' followed your store',
+    null,
+    '/stores/' || new.followed_store_id
+  );
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists on_follow_notify on follows;
+create trigger on_follow_notify
+  after insert on follows
+  for each row execute function public.notify_on_new_follow();
+
+-- New comment → notify the post's store owner (skip if they commented
+-- on their own post)
+create or replace function public.notify_on_new_comment()
+returns trigger as $$
+declare
+  owner_id uuid;
+  commenter_name text;
+  target_post_id uuid;
+begin
+  select s.owner_id, p.id into owner_id, target_post_id
+  from posts p join stores s on s.id = p.store_id
+  where p.id = new.post_id;
+
+  if owner_id = new.user_id then
+    return new; -- don't notify yourself
+  end if;
+
+  select full_name into commenter_name from profiles where id = new.user_id;
+
+  perform notify_push(
+    owner_id,
+    coalesce(commenter_name, 'Someone') || ' commented on your post',
+    left(new.text, 100),
+    '/feed'
+  );
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists on_comment_notify on comments;
+create trigger on_comment_notify
+  after insert on comments
+  for each row execute function public.notify_on_new_comment();
+
+-- Store verification approved/rejected → notify the seller
+create or replace function public.notify_on_verification_change()
+returns trigger as $$
+begin
+  if new.verification_status = old.verification_status then
+    return new;
+  end if;
+
+  if new.verification_status = 'approved' then
+    perform notify_push(new.owner_id, 'Your store is verified ✓', new.name || ' is now verified.', '/dashboard');
+  elsif new.verification_status = 'rejected' then
+    perform notify_push(new.owner_id, 'Verification rejected', coalesce(new.verification_note, ''), '/dashboard/verify');
+  end if;
+
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists on_verification_notify on stores;
+create trigger on_verification_notify
+  after update on stores
+  for each row execute function public.notify_on_verification_change();
