@@ -122,12 +122,27 @@ export default function StorePage() {
             <a
               key={product.id}
               href={`/products/${product.id}`}
-              className="border border-ink/10 rounded-lg p-4 hover:border-ink/30 transition-colors"
+              className="border border-ink/10 rounded-lg overflow-hidden hover:border-ink/30 transition-colors"
             >
-              <p className="font-display text-lg">{product.title}</p>
-              <p className="text-clay font-medium">
-                ₦{Number(product.price).toLocaleString()}
-              </p>
+              <div className="aspect-square bg-ink/5">
+                {product.photo_urls?.[0] ? (
+                  <img
+                    src={product.photo_urls[0]}
+                    alt={product.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-ink/30 text-xs">
+                    No image
+                  </div>
+                )}
+              </div>
+              <div className="p-4">
+                <p className="font-display text-lg">{product.title}</p>
+                <p className="text-clay font-medium">
+                  ₦{Number(product.price).toLocaleString()}
+                </p>
+              </div>
             </a>
           ))}
         </div>
