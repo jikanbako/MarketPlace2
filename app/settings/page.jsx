@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import PushNotificationToggle from '@/components/PushNotificationToggle';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -141,6 +142,8 @@ export default function SettingsPage() {
             </button>
           </form>
         </section>
+
+        <PushNotificationToggle />
 
         <section className="mb-10">
           <h2 className="font-display text-lg mb-3">Password</h2>
