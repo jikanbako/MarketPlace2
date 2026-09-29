@@ -11,6 +11,7 @@ export default function ProductDetailPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
+  const [activePhoto, setActivePhoto] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -80,7 +81,39 @@ export default function ProductDetailPage() {
       <a href="/products" className="text-sm text-ink/60 hover:text-clay">
         ← Back to browse
       </a>
-      <h1 className="font-display text-3xl mt-4 mb-2">{product.title}</h1>
+
+      {product.photo_urls?.length > 0 ? (
+        <div className="mt-4">
+          <div className="aspect-square bg-ink/5 rounded-lg overflow-hidden">
+            <img
+              src={product.photo_urls[activePhoto]}
+              alt={product.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+          {product.photo_urls.length > 1 && (
+            <div className="flex gap-2 mt-2">
+              {product.photo_urls.map((url, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActivePhoto(i)}
+                  className={`w-14 h-14 rounded-md overflow-hidden border-2 ${
+                    i === activePhoto ? 'border-clay' : 'border-transparent'
+                  }`}
+                >
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="mt-4 aspect-square bg-ink/5 rounded-lg flex items-center justify-center text-ink/30 text-sm">
+          No photos yet
+        </div>
+      )}
+
+      <h1 className="font-display text-3xl mt-6 mb-2">{product.title}</h1>
       <a
         href={`/stores/${product.stores?.id}`}
         className="text-ink/60 hover:text-clay text-sm"
