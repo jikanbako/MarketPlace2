@@ -315,9 +315,18 @@ export default function DashboardPage() {
           ) : (
             <div className="divide-y divide-ink/10 border border-ink/10 rounded-lg overflow-hidden">
               {products.slice(0, 8).map((p) => (
-                <div key={p.id} className="flex items-center justify-between px-4 py-3">
-                  <div>
-                    <p className="font-medium text-sm">{p.title}</p>
+                <div key={p.id} className="flex items-center gap-3 px-4 py-3">
+                  <div className="w-12 h-12 rounded-md bg-ink/5 overflow-hidden shrink-0">
+                    {p.photo_urls?.[0] ? (
+                      <img src={p.photo_urls[0]} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-ink/30 text-[10px]">
+                        No img
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{p.title}</p>
                     <p className="text-xs text-ink/50">
                       ₦{Number(p.price).toLocaleString()} · {Number(p.stock_qty) <= 0 ? 'out of stock' : `${p.stock_qty} in stock`}
                     </p>
