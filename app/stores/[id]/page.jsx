@@ -13,6 +13,7 @@ export default function StorePage() {
   const [followerCount, setFollowerCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [followError, setFollowError] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -55,21 +56,32 @@ export default function StorePage() {
   async function toggleFollow() {
     if (!user || busy) return;
     setBusy(true);
+    setFollowError(null);
 
     if (following) {
-      await supabase
+      const { error } = await supabase
         .from('follows')
         .delete()
         .eq('follower_id', user.id)
         .eq('followed_store_id', id);
-      setFollowing(false);
-      setFollowerCount((c) => Math.max(c - 1, 0));
+
+      if (error) {
+        setFollowError(error.message);
+      } else {
+        setFollowing(false);
+        setFollowerCount((c) => Math.max(c - 1, 0));
+      }
     } else {
-      await supabase
+      const { error } = await supabase
         .from('follows')
         .insert({ follower_id: user.id, followed_store_id: id });
-      setFollowing(true);
-      setFollowerCount((c) => c + 1);
+
+      if (error) {
+        setFollowError(error.message);
+      } else {
+        setFollowing(true);
+        setFollowerCount((c) => c + 1);
+      }
     }
     setBusy(false);
   }
@@ -102,15 +114,18 @@ export default function StorePage() {
           </p>
         </div>
         {!isOwner && (
-          <button
-            onClick={following ? toggleFollow : (user ? toggleFollow : () => (window.location.href = '/login'))}
-            disabled={busy}
-            className={`shrink-0 px-5 py-2 rounded-md text-sm disabled:opacity-50 ${
-              following ? 'border border-ink/20 text-ink' : 'bg-ink text-sand'
-            }`}
-          >
-            {following ? 'Following' : 'Follow'}
-          </button>
+          <div className="shrink-0 text-right">
+            <button
+              onClick={following ? toggleFollow : (user ? toggleFollow : () => (window.location.href = '/login'))}
+              disabled={busy}
+              className={`px-5 py-2 rounded-md text-sm disabled:opacity-50 ${
+                following ? 'border border-ink/20 text-ink' : 'bg-ink text-sand'
+              }`}
+            >
+              {following ? 'Following' : 'Follow'}
+            </button>
+            {followError && <p className="text-clay text-xs mt-1 max-w-[180px]">{followError}</p>}
+          </div>
         )}
       </div>
 
