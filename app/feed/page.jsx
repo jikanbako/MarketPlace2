@@ -294,16 +294,26 @@ export default function FeedPage() {
 
   async function handleToggleFollow(storeId, isFollowing) {
     if (isFollowing) {
-      await supabase
+      const { error } = await supabase
         .from('follows')
         .delete()
         .eq('follower_id', user.id)
         .eq('followed_store_id', storeId);
+
+      if (error) {
+        alert(`Couldn't unfollow: ${error.message}`);
+        return;
+      }
       setFollowedStoreIds((ids) => ids.filter((id) => id !== storeId));
     } else {
-      await supabase
+      const { error } = await supabase
         .from('follows')
         .insert({ follower_id: user.id, followed_store_id: storeId });
+
+      if (error) {
+        alert(`Couldn't follow: ${error.message}`);
+        return;
+      }
       setFollowedStoreIds((ids) => [...ids, storeId]);
     }
   }
