@@ -629,14 +629,14 @@ create trigger on_message_notify
 create or replace function public.notify_on_new_follow()
 returns trigger as $$
 declare
-  owner_id uuid;
+  v_owner_id uuid;
   follower_name text;
 begin
-  select owner_id into owner_id from stores where id = new.followed_store_id;
+  select owner_id into v_owner_id from stores where id = new.followed_store_id;
   select full_name into follower_name from profiles where id = new.follower_id;
 
   perform notify_push(
-    owner_id,
+    v_owner_id,
     coalesce(follower_name, 'Someone') || ' followed your store',
     null,
     '/stores/' || new.followed_store_id
@@ -655,22 +655,22 @@ create trigger on_follow_notify
 create or replace function public.notify_on_new_comment()
 returns trigger as $$
 declare
-  owner_id uuid;
+  v_owner_id uuid;
   commenter_name text;
-  target_post_id uuid;
+  v_post_id uuid;
 begin
-  select s.owner_id, p.id into owner_id, target_post_id
+  select s.owner_id, p.id into v_owner_id, v_post_id
   from posts p join stores s on s.id = p.store_id
   where p.id = new.post_id;
 
-  if owner_id = new.user_id then
+  if v_owner_id = new.user_id then
     return new; -- don't notify yourself
   end if;
 
   select full_name into commenter_name from profiles where id = new.user_id;
 
   perform notify_push(
-    owner_id,
+    v_owner_id,
     coalesce(commenter_name, 'Someone') || ' commented on your post',
     left(new.text, 100),
     '/feed'
