@@ -32,7 +32,7 @@ export default function DashboardPage() {
   const [error, setError] = useState(null);
 
   // create-store form state
-  const [form, setForm] = useState({ name: '', description: '', category: '' });
+  const [form, setForm] = useState({ name: '', description: '', category: '', phone_number: '' });
   const [creatingStore, setCreatingStore] = useState(false);
   const [createError, setCreateError] = useState(null);
 
@@ -161,7 +161,7 @@ export default function DashboardPage() {
 
     const { data, error: insertError } = await supabase
       .from('stores')
-      .insert({ owner_id: user.id, name: form.name, description: form.description, category: form.category })
+      .insert({ owner_id: user.id, name: form.name, description: form.description, category: form.category, phone_number: form.phone_number })
       .select()
       .single();
 
@@ -224,13 +224,25 @@ export default function DashboardPage() {
             <h1 className="font-display text-3xl">{store.name}</h1>
             {store.category && <p className="text-ink/60 text-sm">{store.category}</p>}
             {store.description && <p className="text-ink/70 mt-2">{store.description}</p>}
-            <a href="/dashboard/verify" className={`text-sm underline ${badge.color}`}>
+            {store.phone_number ? (
+              <p className="text-ink/60 text-sm mt-1">📞 {store.phone_number}</p>
+            ) : (
+              <a href="/dashboard/store/edit" className="text-clay text-sm underline mt-1 inline-block">
+                Add a phone number so buyers can reach you
+              </a>
+            )}
+            <a href="/dashboard/verify" className={`text-sm underline block ${badge.color}`}>
               {badge.text}
             </a>
           </div>
-          <a href={`/stores/${store.id}`} className="shrink-0 border border-ink/20 px-4 py-2 rounded-md text-sm">
-            View store
-          </a>
+          <div className="shrink-0 flex flex-col gap-2 items-end">
+            <a href={`/stores/${store.id}`} className="border border-ink/20 px-4 py-2 rounded-md text-sm text-center">
+              View store
+            </a>
+            <a href="/dashboard/store/edit" className="text-xs underline text-ink/60">
+              Edit store
+            </a>
+          </div>
         </div>
       ) : (
         <div>
@@ -451,6 +463,19 @@ export default function DashboardPage() {
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 className="w-full border border-ink/20 rounded-md px-3 py-2"
               />
+            </div>
+            <div>
+              <label className="block text-sm mb-1">Phone number</label>
+              <input
+                type="tel"
+                placeholder="e.g. +2348012345678"
+                value={form.phone_number}
+                onChange={(e) => setForm({ ...form, phone_number: e.target.value })}
+                className="w-full border border-ink/20 rounded-md px-3 py-2"
+              />
+              <p className="text-xs text-ink/50 mt-1">
+                Shown on your posts so buyers can call or WhatsApp you directly. Optional.
+              </p>
             </div>
             {createError && <p className="text-clay text-sm">{createError}</p>}
             <button
