@@ -706,3 +706,7 @@ drop trigger if exists on_verification_notify on stores;
 create trigger on_verification_notify
   after update on stores
   for each row execute function public.notify_on_verification_change();
+
+-- Contact number shown on a store's posts, so buyers can call/WhatsApp
+-- directly from the feed without opening a conversation first.
+alter table stores add column if not exists phone_number text;
