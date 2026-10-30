@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
-function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow }) {
+function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow, soundOn, onToggleSound }) {
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likes_count);
   const [busy, setBusy] = useState(false);
@@ -27,6 +27,14 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow }) {
     observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, [post.media_type]);
+
+  // Keep the video element's actual `muted` property in sync with the
+  // feed-wide sound preference. Setting it via the ref (not just the
+  // JSX attribute) is what reliably works for toggling after the video
+  // has already started playing.
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.muted = !soundOn;
+  }, [soundOn]);
 
   useEffect(() => {
     async function checkLiked() {
@@ -101,6 +109,9 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow }) {
     }
   }
 
+  const phone = post.stores?.phone_number;
+  const whatsappHref = phone ? `https://wa.me/${phone.replace(/[^0-9]/g, '')}` : null;
+
   return (
     <div
       ref={containerRef}
@@ -111,7 +122,7 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow }) {
           ref={videoRef}
           src={post.media_url}
           className="max-h-full max-w-full object-contain"
-          muted
+          muted={!soundOn}
           loop
           playsInline
           onClick={(e) => {
@@ -127,19 +138,48 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow }) {
         />
       )}
 
+      {post.media_type === 'video' && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSound();
+          }}
+          className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/40 text-sand flex items-center justify-center text-base"
+        >
+          {soundOn ? '🔊' : '🔇'}
+        </button>
+      )}
+
       <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/70 to-transparent text-sand">
         <a href={`/stores/${post.store_id}`} className="text-sm font-medium hover:underline">
           {post.stores?.name}
         </a>
         <p className="text-sm mt-1">{post.caption}</p>
-        {post.product_id && (
-          <a
-            href={`/products/${post.product_id}`}
-            className="inline-block mt-2 text-xs px-3 py-1.5 bg-sand text-ink rounded-full"
-          >
-            View product · ₦{Number(post.products?.price || 0).toLocaleString()}
-          </a>
-        )}
+        <div className="flex flex-wrap items-center gap-2 mt-2">
+          {post.product_id && (
+            <a
+              href={`/products/${post.product_id}`}
+              className="inline-block text-xs px-3 py-1.5 bg-sand text-ink rounded-full"
+            >
+              View product · ₦{Number(post.products?.price || 0).toLocaleString()}
+            </a>
+          )}
+          {phone && (
+            <>
+              <a href={`tel:${phone}`} className="inline-block text-xs px-3 py-1.5 bg-sand text-ink rounded-full">
+                📞 {phone}
+              </a>
+              <a
+                href={whatsappHref}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-block text-xs px-3 py-1.5 bg-moss text-sand rounded-full"
+              >
+                WhatsApp
+              </a>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="absolute right-3 bottom-24 flex flex-col items-center gap-5 text-sand">
@@ -262,6 +302,10 @@ export default function FeedPage() {
   const [activeComments, setActiveComments] = useState(null);
   const [tab, setTab] = useState('forYou'); // 'forYou' | 'following'
   const [followedStoreIds, setFollowedStoreIds] = useState([]);
+  // Starts muted (required for autoplay in every browser); once the
+  // person taps the speaker icon once, it stays on for the rest of
+  // the session across every video post — same as TikTok.
+  const [soundOn, setSoundOn] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -270,7 +314,7 @@ export default function FeedPage() {
 
       const { data } = await supabase
         .from('posts')
-        .select('*, stores(name, owner_id), products(title, price)')
+        .select('*, stores(name, owner_id, phone_number), products(title, price)')
         .order('created_at', { ascending: false });
       setPosts(data || []);
 
@@ -365,6 +409,8 @@ export default function FeedPage() {
               onOpenComments={setActiveComments}
               isFollowing={followedStoreIds.includes(post.store_id)}
               onToggleFollow={handleToggleFollow}
+              soundOn={soundOn}
+              onToggleSound={() => setSoundOn((s) => !s)}
             />
           ))}
         </div>
