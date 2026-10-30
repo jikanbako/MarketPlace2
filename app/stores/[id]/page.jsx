@@ -109,6 +109,21 @@ export default function StorePage() {
           </h1>
           {store.category && <p className="text-ink/60 text-sm mb-2">{store.category}</p>}
           {store.description && <p className="text-ink/70 max-w-xl mb-2">{store.description}</p>}
+          {store.phone_number && (
+            <div className="flex gap-2 mb-2">
+              <a href={`tel:${store.phone_number}`} className="text-xs px-3 py-1.5 border border-ink/20 rounded-full">
+                📞 {store.phone_number}
+              </a>
+              <a
+                href={`https://wa.me/${store.phone_number.replace(/[^0-9]/g, '')}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs px-3 py-1.5 bg-moss text-sand rounded-full"
+              >
+                WhatsApp
+              </a>
+            </div>
+          )}
           <p className="text-sm text-ink/50">
             {followerCount} {followerCount === 1 ? 'follower' : 'followers'}
           </p>
