@@ -78,6 +78,11 @@ Next.js and Supabase.
   - **No store yet:** the create-store form appears at the bottom, so
     a buyer can become a seller without losing anything — this was a
     regression in an earlier draft that's now fixed
+  - A prompt to add a phone number appears in the header if you
+    haven't set one yet (it's what shows up on your feed posts)
+- `/dashboard/store/edit` — edit your store's name, category,
+  description, and **phone number** (shown on your feed posts as
+  call/WhatsApp chips — leave it blank to keep it hidden)
 - `/dashboard/products/new` — add a product to your store, **with up
   to 5 photos** (uploaded to Storage, first photo is the main image)
 - `/dashboard/products/[id]/edit` — edit a product's details, its
@@ -100,6 +105,10 @@ Next.js and Supabase.
 - `/stores/[id]` — public store page listing everything that store sells,
   with a **Follow/Following** button and live follower count
 - `/messages` — inbox of all your conversations
+- `/cart`, `/checkout`, `/orders` — cart, Paystack checkout, and a
+  buyer's order history (see **Payments** below)
+- `/dashboard/payouts` and `/dashboard/orders` — seller bank-account
+  setup and incoming orders with delivery details
 - `/settings` — edit your name and location, change your password,
   **turn push notifications on/off**, log out
 - **Push notifications** — opt-in from `/settings`; fires for a new
@@ -119,12 +128,16 @@ Next.js and Supabase.
 - `/messages/[id]` — a real-time chat thread (Supabase Realtime) with
   a seller or buyer
 - `/feed` — TikTok-style vertical swipe feed of photo and video posts
-  (video autoplays muted/looped only while it's the one on screen), with
-  **"For you" / "Following" tabs** (Following shows only posts from
-  stores you follow), a right-side icon column like TikTok's — **Follow
-  (+/✓)**, **Like** (heart, live count), **Comment** (slides up a panel),
-  and **Message** (starts/resumes a conversation with the seller,
-  without leaving the feed) — plus store name and caption at bottom-left
+  (video autoplays muted/looped only while it's the one on screen —
+  browsers require starting muted; tap the 🔊/🔇 icon top-right to turn
+  sound on, which then stays on for every video for the rest of the
+  session, same as TikTok), with **"For you" / "Following" tabs**
+  (Following shows only posts from stores you follow), a right-side
+  icon column like TikTok's — **Follow (+/✓)**, **Like** (heart, live
+  count), **Comment** (slides up a panel), and **Message**
+  (starts/resumes a conversation with the seller, without leaving the
+  feed) — plus store name, caption, and a **📞 call / WhatsApp chip**
+  at bottom-left whenever the seller has added a phone number
 - `/admin` — admin-only dashboard (guarded by role check + RLS):
   - Overview — live counts (users, banned users, stores, stores awaiting
     verification, posts), each linking to the relevant tab
@@ -160,6 +173,64 @@ Next.js and Supabase.
   with a 50MB cap enforced client-side to keep things reasonable, but
   there's no server-side transcoding (fine for MVP, revisit before scale)
 - Read receipts / unread counts / push notifications for messages
+
+## Payments (Paystack)
+
+Buyers pay on Paystack's hosted page; each seller's share goes **straight
+to the seller's own bank account**. BuyLink holds no money and takes no
+commission (that's a one-line change later — see "Commission" below).
+
+**How it works**
+- A seller adds a bank account at `/dashboard/payouts`. The server turns
+  that into a Paystack *subaccount* (`percentage_charge: 0`) and only
+  keeps the last 4 digits of the account number.
+- A buyer can **Buy now** (one product) or **Add to cart** (`/cart`) and
+  check out (`/checkout`) with delivery details. A cart with products
+  from several sellers is still **one payment**, split between them using
+  Paystack's dynamic split.
+- Paystack's processing fee comes out of each seller's share, in
+  proportion (`bearer_type: all-proportional`), so BuyLink never pays it.
+- Every price and amount is recomputed **on the server** from the
+  database. The browser only says what it wants to buy.
+- A payment is marked paid only after Paystack confirms it — both when
+  the buyer returns (`/checkout/verify`) and through a signed webhook,
+  so an order is still recorded if the buyer closes their browser.
+- Sellers see paid orders with the delivery details at `/dashboard/orders`
+  and mark them **shipped**; buyers see `/orders` and confirm **received**.
+  Both get a push notification when the other acts.
+
+**Setup**
+1. Create a Paystack account. In Dashboard → Settings → API Keys, copy
+   your **test secret key** into `PAYSTACK_SECRET_KEY` (locally and in
+   Vercel). Redeploy after adding it.
+2. In Dashboard → Settings → API Keys & Webhooks, set the **Webhook URL**
+   to `https://your-site.com/api/paystack/webhook`.
+3. Re-run the whole `supabase/schema.sql` in the Supabase SQL editor.
+4. Make sure `SUPABASE_SERVICE_ROLE_KEY` is set (the server needs it).
+5. Sign in as a seller → **Payouts** → add a bank account. Until then,
+   that seller's products show "hasn't set up payments yet" and can't be
+   bought.
+
+**Test it before using real money** (with the test key `sk_test_...`):
+- Pay with Paystack's test card shown on their checkout page.
+- In test mode, Paystack can't look up arbitrary account names, so a
+  failed name lookup is allowed through; in live mode it blocks setup.
+- Do one **multi-seller cart** purchase and check, in the Paystack
+  dashboard's transaction details, that the split amounts per seller are
+  exactly right and that BuyLink's own share is 0. Only then switch to
+  the live key.
+
+**Known limits (deliberate, for now)**
+- No delivery fee and no refunds/disputes flow — handle those with the
+  seller directly, and refunds from the Paystack dashboard.
+- Stock is checked when checkout starts and reduced when payment is
+  confirmed. Two buyers paying for the last item at once can both succeed
+  (stock is clamped at 0); the seller would need to resolve that manually.
+- Abandoned checkouts leave a hidden `pending_payment` order behind. It's
+  never shown to anyone and is harmless, but can be cleaned up in bulk.
+- **Commission:** to take a cut later, add a BuyLink share to the `split`
+  in `app/api/checkout/initialize/route.js` (the main account's share is
+  whatever is left over after the sellers' flat shares).
 
 ## Notes
 
