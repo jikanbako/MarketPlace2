@@ -1,22 +1,22 @@
 import webpush from 'web-push';
-import { createClient } from '@supabase/supabase-js';
+import { getAdmin } from '@/lib/supabaseAdmin';
 
-// This route is called from inside Postgres (via the pg_net extension,
-// see supabase/schema.sql's notify_push() function), not from the
-// browser. It's protected by a shared secret header rather than a user
-// session, since there is no user session at that point — it's the
-// database itself making the request.
+export const dynamic = 'force-dynamic';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY // server-only — bypasses RLS to read subscriptions
-);
+// Called from inside Postgres (pg_net, see notify_push() in schema.sql),
+// not from the browser. Protected by a shared secret header because
+// there's no user session — it's the database itself calling.
 
-webpush.setVapidDetails(
-  'mailto:support@example.com', // replace with a real contact address
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY
-);
+let vapidReady = false;
+function ensureVapid() {
+  if (vapidReady) return;
+  webpush.setVapidDetails(
+    'mailto:support@example.com', // replace with a real contact address
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+  vapidReady = true;
+}
 
 export async function POST(request) {
   const secret = request.headers.get('x-push-secret');
@@ -29,7 +29,14 @@ export async function POST(request) {
     return Response.json({ error: 'Missing user_id or title' }, { status: 400 });
   }
 
-  const { data: subscriptions, error } = await supabaseAdmin
+  try {
+    ensureVapid();
+  } catch (err) {
+    return Response.json({ error: 'Push is not configured on the server' }, { status: 500 });
+  }
+
+  const admin = getAdmin();
+  const { data: subscriptions, error } = await admin
     .from('push_subscriptions')
     .select('*')
     .eq('user_id', user_id);
@@ -46,17 +53,13 @@ export async function POST(request) {
   const results = await Promise.allSettled(
     subscriptions.map((sub) =>
       webpush.sendNotification(
-        {
-          endpoint: sub.endpoint,
-          keys: { p256dh: sub.p256dh, auth: sub.auth_key },
-        },
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } },
         payload
       )
     )
   );
 
-  // A 404/410 means the browser unsubscribed or the subscription
-  // expired — clean those up so we stop trying to send to them.
+  // 404/410 = the browser unsubscribed or the subscription expired
   const deadEndpoints = [];
   results.forEach((result, i) => {
     if (result.status === 'rejected') {
@@ -68,7 +71,7 @@ export async function POST(request) {
   });
 
   if (deadEndpoints.length > 0) {
-    await supabaseAdmin.from('push_subscriptions').delete().in('endpoint', deadEndpoints);
+    await admin.from('push_subscriptions').delete().in('endpoint', deadEndpoints);
   }
 
   const sent = results.filter((r) => r.status === 'fulfilled').length;
