@@ -36,6 +36,7 @@ create table if not exists stores (
   business_proof_url text,
   verification_note text,
   verification_submitted_at timestamptz,
+  payments_enabled boolean default false,
   created_at timestamptz default now()
 );
 
@@ -124,6 +125,7 @@ alter table stores add column if not exists id_document_url text;
 alter table stores add column if not exists business_proof_url text;
 alter table stores add column if not exists verification_note text;
 alter table stores add column if not exists verification_submitted_at timestamptz;
+alter table stores add column if not exists payments_enabled boolean default false;
 
 alter table posts alter column product_id drop not null;
 
@@ -215,6 +217,14 @@ $$ language plpgsql;
 create or replace function public.enforce_store_verification_columns()
 returns trigger as $$
 begin
+  -- payments_enabled is switched on by the server after a seller's payout
+  -- account is verified with Paystack — sellers must not set it themselves.
+  if new.payments_enabled is distinct from old.payments_enabled
+     and not is_admin()
+     and coalesce(auth.role(), '') <> 'service_role' then
+    raise exception 'payments_enabled can only be changed by the server';
+  end if;
+
   if not is_admin() then
     if new.verification_status is distinct from old.verification_status
        and new.verification_status <> 'pending' then
@@ -710,3 +720,257 @@ create trigger on_verification_notify
 -- Contact number shown on a store's posts, so buyers can call/WhatsApp
 -- directly from the feed without opening a conversation first.
 alter table stores add column if not exists phone_number text;
+
+-- ============================================================
+-- PAYMENTS (Paystack) — payout accounts, cart, payments, orders
+-- Money amounts are stored in kobo (1 naira = 100 kobo) as bigint to
+-- avoid floating-point rounding. All writes that move money or change
+-- payment state go through the server (service role) or the
+-- security-definer functions below — never directly from the browser.
+-- ============================================================
+
+-- A seller's payout destination. We keep only the LAST 4 digits of the
+-- account number — Paystack holds the full number against the
+-- subaccount, and we never need it again. No insert/update/delete
+-- policies on purpose: only the server (service role) writes here.
+create table if not exists seller_payout_accounts (
+  store_id uuid primary key references stores(id) on delete cascade,
+  owner_id uuid references profiles(id) on delete cascade not null,
+  bank_code text not null,
+  bank_name text,
+  account_last4 text,
+  account_name text,
+  paystack_subaccount_code text not null,
+  created_at timestamptz default now()
+);
+alter table seller_payout_accounts enable row level security;
+
+drop policy if exists "Owners can view their own payout account" on seller_payout_accounts;
+create policy "Owners can view their own payout account"
+  on seller_payout_accounts for select
+  using (auth.uid() = owner_id or is_admin());
+
+-- Shopping cart, stored server-side so it follows the buyer across devices
+create table if not exists cart_items (
+  user_id uuid references profiles(id) on delete cascade not null,
+  product_id uuid references products(id) on delete cascade not null,
+  quantity integer not null default 1 check (quantity > 0 and quantity <= 99),
+  created_at timestamptz default now(),
+  primary key (user_id, product_id)
+);
+alter table cart_items enable row level security;
+
+drop policy if exists "Users can view their own cart" on cart_items;
+create policy "Users can view their own cart"
+  on cart_items for select using (auth.uid() = user_id);
+
+drop policy if exists "Users can add to their own cart" on cart_items;
+create policy "Users can add to their own cart"
+  on cart_items for insert with check (auth.uid() = user_id and not is_banned());
+
+drop policy if exists "Users can update their own cart" on cart_items;
+create policy "Users can update their own cart"
+  on cart_items for update using (auth.uid() = user_id);
+
+drop policy if exists "Users can remove from their own cart" on cart_items;
+create policy "Users can remove from their own cart"
+  on cart_items for delete using (auth.uid() = user_id);
+
+-- One row per Paystack transaction. A single payment can cover several
+-- orders (one per store) when a cart contains products from more than
+-- one seller.
+create table if not exists payments (
+  id uuid primary key default gen_random_uuid(),
+  reference text unique not null,
+  buyer_id uuid references profiles(id) on delete set null,
+  amount_kobo bigint not null,
+  currency text default 'NGN',
+  status text not null default 'pending' check (status in ('pending', 'paid', 'failed')),
+  paid_at timestamptz,
+  created_at timestamptz default now()
+);
+alter table payments enable row level security;
+
+drop policy if exists "Buyers can view their own payments" on payments;
+create policy "Buyers can view their own payments"
+  on payments for select using (auth.uid() = buyer_id or is_admin());
+
+-- One order per store within a payment
+create table if not exists orders (
+  id uuid primary key default gen_random_uuid(),
+  payment_id uuid references payments(id) on delete cascade not null,
+  buyer_id uuid references profiles(id) on delete set null,
+  store_id uuid references stores(id) on delete set null,
+  status text not null default 'pending_payment'
+    check (status in ('pending_payment', 'paid', 'shipped', 'delivered', 'cancelled')),
+  subtotal_kobo bigint not null,
+  delivery_name text not null,
+  delivery_phone text not null,
+  delivery_address text not null,
+  delivery_city text not null,
+  delivery_state text not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+create index if not exists orders_buyer_idx on orders (buyer_id);
+create index if not exists orders_store_idx on orders (store_id);
+alter table orders enable row level security;
+
+-- Buyers see their own orders; sellers see orders for their store, but
+-- only once paid (an abandoned checkout is never shown to a seller).
+drop policy if exists "Buyers and sellers can view their orders" on orders;
+create policy "Buyers and sellers can view their orders"
+  on orders for select
+  using (
+    auth.uid() = buyer_id
+    or is_admin()
+    or (
+      status <> 'pending_payment'
+      and auth.uid() = (select owner_id from stores where id = store_id)
+    )
+  );
+
+-- Price/title snapshot taken at checkout, so editing or deleting a
+-- product later never rewrites what someone actually bought.
+create table if not exists order_items (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid references orders(id) on delete cascade not null,
+  product_id uuid references products(id) on delete set null,
+  title text not null,
+  unit_price_kobo bigint not null,
+  quantity integer not null check (quantity > 0)
+);
+create index if not exists order_items_order_idx on order_items (order_id);
+alter table order_items enable row level security;
+
+drop policy if exists "Order items follow order visibility" on order_items;
+create policy "Order items follow order visibility"
+  on order_items for select
+  using (exists (select 1 from orders o where o.id = order_id));
+
+-- Marks a payment as paid, exactly once. Called ONLY by the server after
+-- Paystack has confirmed the transaction. Idempotent (safe if both the
+-- webhook and the verify step fire), and refuses if the amount Paystack
+-- reports differs from what we expected.
+create or replace function public.fulfill_payment(p_reference text, p_amount_kobo bigint)
+returns boolean as $$
+declare
+  v_pay payments%rowtype;
+  v_ord record;
+  v_item record;
+begin
+  select * into v_pay from payments where reference = p_reference for update;
+  if not found then
+    raise exception 'Unknown payment reference';
+  end if;
+
+  if v_pay.status = 'paid' then
+    return true;
+  end if;
+
+  if v_pay.amount_kobo <> p_amount_kobo then
+    raise exception 'Amount mismatch: expected %, got %', v_pay.amount_kobo, p_amount_kobo;
+  end if;
+
+  update payments set status = 'paid', paid_at = now() where id = v_pay.id;
+  update orders set status = 'paid', updated_at = now() where payment_id = v_pay.id;
+
+  -- Reduce stock (never below zero)
+  for v_item in
+    select oi.product_id, oi.quantity
+    from order_items oi
+    join orders o on o.id = oi.order_id
+    where o.payment_id = v_pay.id and oi.product_id is not null
+  loop
+    update products
+    set stock_qty = greatest(coalesce(stock_qty, 0) - v_item.quantity, 0)
+    where id = v_item.product_id;
+  end loop;
+
+  -- Remove what they just bought from their cart
+  delete from cart_items
+  where user_id = v_pay.buyer_id
+    and product_id in (
+      select oi.product_id
+      from order_items oi
+      join orders o on o.id = oi.order_id
+      where o.payment_id = v_pay.id
+    );
+
+  -- Tell each seller they have a new paid order
+  for v_ord in
+    select o.id as order_id, s.owner_id as seller_id, o.subtotal_kobo
+    from orders o
+    join stores s on s.id = o.store_id
+    where o.payment_id = v_pay.id
+  loop
+    perform notify_push(
+      v_ord.seller_id,
+      'New paid order',
+      'N' || (v_ord.subtotal_kobo / 100)::text || ' — ready to ship',
+      '/dashboard/orders'
+    );
+  end loop;
+
+  return true;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+-- Sellers mark paid orders as shipped; buyers confirm receipt. This is
+-- the ONLY way an order's status changes after payment — there is
+-- deliberately no UPDATE policy on orders.
+create or replace function public.update_order_status(p_order_id uuid, p_status text)
+returns void as $$
+declare
+  v_order orders%rowtype;
+  v_seller uuid;
+begin
+  select * into v_order from orders where id = p_order_id for update;
+  if not found then
+    raise exception 'Order not found';
+  end if;
+
+  select owner_id into v_seller from stores where id = v_order.store_id;
+
+  if p_status = 'shipped' then
+    if v_seller is distinct from auth.uid() then
+      raise exception 'Only the seller can mark an order as shipped';
+    end if;
+    if v_order.status <> 'paid' then
+      raise exception 'Only paid orders can be marked as shipped';
+    end if;
+  elsif p_status = 'delivered' then
+    if v_order.buyer_id is distinct from auth.uid() then
+      raise exception 'Only the buyer can confirm delivery';
+    end if;
+    if v_order.status <> 'shipped' then
+      raise exception 'Only shipped orders can be marked as received';
+    end if;
+  else
+    raise exception 'Unsupported status';
+  end if;
+
+  update orders set status = p_status, updated_at = now() where id = p_order_id;
+
+  if p_status = 'shipped' then
+    perform notify_push(v_order.buyer_id, 'Your order has shipped', 'The seller marked it as shipped.', '/orders');
+  else
+    perform notify_push(v_seller, 'Order received', 'The buyer confirmed they received it.', '/dashboard/orders');
+  end if;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+-- ---- Who may call what (this matters) --------------------------------
+-- Supabase exposes every public function to the browser as an RPC by
+-- default. These two lines are what stops a user from calling
+-- fulfill_payment() on their own unpaid order.
+revoke all on function public.fulfill_payment(text, bigint) from public, anon, authenticated;
+grant execute on function public.fulfill_payment(text, bigint) to service_role;
+
+revoke all on function public.update_order_status(uuid, text) from public, anon;
+grant execute on function public.update_order_status(uuid, text) to authenticated;
+
+-- Same problem existed on notify_push() from the push-notification work:
+-- left callable, any visitor could trigger a notification to anyone.
+-- Triggers still work because they run as the function owner.
+revoke all on function public.notify_push(uuid, text, text, text) from public, anon, authenticated;
