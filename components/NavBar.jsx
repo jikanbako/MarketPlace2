@@ -9,6 +9,8 @@ const LINKS = [
   { href: '/dashboard', label: 'Sell' },
   { href: '/dashboard/posts/new', label: 'Post' },
   { href: '/messages', label: 'Messages' },
+  { href: '/cart', label: 'Cart' },
+  { href: '/orders', label: 'Orders' },
 ];
 
 export default function NavBar() {
