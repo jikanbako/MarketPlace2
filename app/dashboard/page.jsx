@@ -254,6 +254,19 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Payments nudge — sellers who can't be paid yet */}
+      {store && !store.payments_enabled && (
+        <a
+          href="/dashboard/payouts"
+          className="block border border-clay/40 bg-clay/5 rounded-lg p-4"
+        >
+          <p className="font-medium text-sm text-clay">Set up payouts to start getting paid</p>
+          <p className="text-xs text-ink/60 mt-1">
+            Add your bank account so buyers can pay you through BuyLink. It takes a minute.
+          </p>
+        </a>
+      )}
+
       {/* Stats — sellers only */}
       {store && (
         <section className="grid grid-cols-3 gap-3">
@@ -278,6 +291,14 @@ export default function DashboardPage() {
               <p className="text-xl mb-1">＋</p>
               <p className="font-medium text-sm">Create post</p>
             </a>
+            <a href="/dashboard/orders" className="border border-ink/10 rounded-lg p-4 hover:border-ink/30">
+              <p className="text-xl mb-1">📦</p>
+              <p className="font-medium text-sm">Orders</p>
+            </a>
+            <a href="/dashboard/payouts" className="border border-ink/10 rounded-lg p-4 hover:border-ink/30">
+              <p className="text-xl mb-1">🏦</p>
+              <p className="font-medium text-sm">Payouts</p>
+            </a>
           </>
         ) : (
           <>
@@ -288,6 +309,14 @@ export default function DashboardPage() {
             <a href="/products" className="border border-ink/10 rounded-lg p-4 hover:border-ink/30">
               <p className="text-xl mb-1">🔍</p>
               <p className="font-medium text-sm">Browse products</p>
+            </a>
+            <a href="/cart" className="border border-ink/10 rounded-lg p-4 hover:border-ink/30">
+              <p className="text-xl mb-1">🛒</p>
+              <p className="font-medium text-sm">My cart</p>
+            </a>
+            <a href="/orders" className="border border-ink/10 rounded-lg p-4 hover:border-ink/30">
+              <p className="text-xl mb-1">📦</p>
+              <p className="font-medium text-sm">My orders</p>
             </a>
           </>
         )}
