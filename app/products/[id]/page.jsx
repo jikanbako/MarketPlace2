@@ -12,6 +12,9 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
+  const [qty, setQty] = useState(1);
+  const [cartBusy, setCartBusy] = useState(false);
+  const [cartMessage, setCartMessage] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -20,7 +23,7 @@ export default function ProductDetailPage() {
 
       const { data } = await supabase
         .from('products')
-        .select('*, stores(id, name, description, owner_id)')
+        .select('*, stores(id, name, description, owner_id, payments_enabled)')
         .eq('id', id)
         .single();
       setProduct(data);
@@ -28,6 +31,45 @@ export default function ProductDetailPage() {
     }
     load();
   }, [id]);
+
+  async function handleAddToCart() {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    setCartBusy(true);
+    setCartMessage(null);
+
+    const { data: existing } = await supabase
+      .from('cart_items')
+      .select('quantity')
+      .eq('user_id', user.id)
+      .eq('product_id', product.id)
+      .maybeSingle();
+
+    const newQty = Math.min((existing?.quantity || 0) + qty, product.stock_qty || 1, 99);
+
+    const { error } = existing
+      ? await supabase
+          .from('cart_items')
+          .update({ quantity: newQty })
+          .eq('user_id', user.id)
+          .eq('product_id', product.id)
+      : await supabase
+          .from('cart_items')
+          .insert({ user_id: user.id, product_id: product.id, quantity: newQty });
+
+    setCartBusy(false);
+    setCartMessage(error ? { error: error.message } : { ok: true });
+  }
+
+  function handleBuyNow() {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    router.push(`/checkout?source=buy_now&product=${product.id}&qty=${qty}`);
+  }
 
   async function handleMessageSeller() {
     if (!user) {
@@ -75,6 +117,8 @@ export default function ProductDetailPage() {
       </div>
     );
   }
+
+  const isOwner = user && product.stores?.owner_id === user.id;
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-12">
@@ -124,12 +168,66 @@ export default function ProductDetailPage() {
         ₦{Number(product.price).toLocaleString()}
       </p>
       <p className="text-ink/80 mb-6">{product.description}</p>
-      <p className="text-sm text-ink/50 mb-8">
+      <p className="text-sm text-ink/50 mb-4">
         {product.stock_qty > 0 ? `${product.stock_qty} in stock` : 'Out of stock'}
       </p>
+
+      {isOwner ? (
+        <p className="text-sm text-ink/50 mb-4">This is your product.</p>
+      ) : !product.stores?.payments_enabled ? (
+        <p className="text-sm text-ink/60 border border-ink/10 rounded-md p-3 mb-4">
+          This seller hasn't set up payments yet. You can still message them
+          to arrange a purchase.
+        </p>
+      ) : product.stock_qty > 0 ? (
+        <div className="mb-4">
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-sm">Quantity</span>
+            <div className="flex items-center border border-ink/20 rounded-md">
+              <button
+                type="button"
+                onClick={() => setQty((q) => Math.max(1, q - 1))}
+                className="px-3 py-1.5"
+              >
+                −
+              </button>
+              <span className="px-3 text-sm min-w-[2rem] text-center">{qty}</span>
+              <button
+                type="button"
+                onClick={() => setQty((q) => Math.min(product.stock_qty, 99, q + 1))}
+                className="px-3 py-1.5"
+              >
+                +
+              </button>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={handleBuyNow}
+              className="flex-1 px-6 py-3 bg-clay text-sand rounded-md"
+            >
+              Buy now · ₦{(Number(product.price) * qty).toLocaleString()}
+            </button>
+            <button
+              onClick={handleAddToCart}
+              disabled={cartBusy}
+              className="flex-1 px-6 py-3 border border-ink rounded-md disabled:opacity-50"
+            >
+              {cartBusy ? 'Adding…' : 'Add to cart'}
+            </button>
+          </div>
+          {cartMessage?.ok && (
+            <p className="text-sm text-moss mt-2">
+              Added to your cart. <a href="/cart" className="underline">View cart</a>
+            </p>
+          )}
+          {cartMessage?.error && <p className="text-sm text-clay mt-2">{cartMessage.error}</p>}
+        </div>
+      ) : null}
+
       <button
         onClick={handleMessageSeller}
-        disabled={starting || product.stores?.owner_id === user?.id}
+        disabled={starting || isOwner}
         className="px-6 py-3 bg-ink text-sand rounded-md disabled:opacity-50"
       >
         {starting ? 'Starting…' : 'Message seller'}
