@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import AddToCartButton from '@/components/AddToCartButton';
 
 function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow, soundOn, onToggleSound }) {
   const [liked, setLiked] = useState(false);
@@ -109,6 +110,12 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow, sou
     }
   }
 
+  const isOwner = user?.id === post.stores?.owner_id;
+  const stock = post.products?.stock_qty ?? 0;
+  // Buyable only if it has a product, the seller can receive payments,
+  // it's in stock, and it isn't the viewer's own product.
+  const canBuy = !!post.product_id && !isOwner && !!post.stores?.payments_enabled && stock > 0;
+
   const phone = post.stores?.phone_number;
   const whatsappHref = phone ? `https://wa.me/${phone.replace(/[^0-9]/g, '')}` : null;
 
@@ -156,12 +163,29 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow, sou
         </a>
         <p className="text-sm mt-1">{post.caption}</p>
         <div className="flex flex-wrap items-center gap-2 mt-2">
-          {post.product_id && (
+          {post.product_id && canBuy && (
+            <>
+              <a
+                href={`/checkout?source=buy_now&product=${post.product_id}&qty=1`}
+                className="inline-block text-xs px-3 py-1.5 bg-clay text-sand rounded-full font-medium"
+              >
+                Buy now · ₦{Number(post.products?.price || 0).toLocaleString()}
+              </a>
+              <a
+                href={`/products/${post.product_id}`}
+                className="inline-block text-xs px-3 py-1.5 bg-sand text-ink rounded-full"
+              >
+                Details
+              </a>
+            </>
+          )}
+          {post.product_id && !canBuy && (
             <a
               href={`/products/${post.product_id}`}
               className="inline-block text-xs px-3 py-1.5 bg-sand text-ink rounded-full"
             >
               View product · ₦{Number(post.products?.price || 0).toLocaleString()}
+              {!isOwner && post.products && stock <= 0 ? ' · Sold out' : ''}
             </a>
           )}
           {phone && (
@@ -207,6 +231,7 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow, sou
           <span className="text-2xl">💬</span>
           <span className="text-xs">{post.comments_count}</span>
         </button>
+        {canBuy && <AddToCartButton variant="icon" productId={post.product_id} stock={stock} />}
         {user?.id !== post.stores?.owner_id && (
           <button onClick={handleMessage} className="flex flex-col items-center gap-1">
             <span className="text-2xl">✉️</span>
@@ -314,7 +339,7 @@ export default function FeedPage() {
 
       const { data } = await supabase
         .from('posts')
-        .select('*, stores(name, owner_id, phone_number), products(title, price)')
+        .select('*, stores(name, owner_id, phone_number, payments_enabled), products(title, price, stock_qty)')
         .order('created_at', { ascending: false });
       setPosts(data || []);
 
