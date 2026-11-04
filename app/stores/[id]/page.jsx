@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import AddToCartButton from '@/components/AddToCartButton';
 
 export default function StorePage() {
   const { id } = useParams();
@@ -148,33 +149,45 @@ export default function StorePage() {
         <p className="text-ink/60">This store hasn't listed any products yet.</p>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-          {products.map((product) => (
-            <a
-              key={product.id}
-              href={`/products/${product.id}`}
-              className="border border-ink/10 rounded-lg overflow-hidden hover:border-ink/30 transition-colors"
-            >
-              <div className="aspect-square bg-ink/5">
-                {product.photo_urls?.[0] ? (
-                  <img
-                    src={product.photo_urls[0]}
-                    alt={product.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-ink/30 text-xs">
-                    No image
+          {products.map((product) => {
+            const inStock = (product.stock_qty ?? 0) > 0;
+            const canBuy = inStock && store.payments_enabled && !isOwner;
+            return (
+              <div
+                key={product.id}
+                className="border border-ink/10 rounded-lg overflow-hidden hover:border-ink/30 transition-colors flex flex-col"
+              >
+                <a href={`/products/${product.id}`} className="block flex-1">
+                  <div className="aspect-square bg-ink/5">
+                    {product.photo_urls?.[0] ? (
+                      <img
+                        src={product.photo_urls[0]}
+                        alt={product.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-ink/30 text-xs">
+                        No image
+                      </div>
+                    )}
                   </div>
-                )}
+                  <div className="p-4 pb-2">
+                    <p className="font-display text-lg">{product.title}</p>
+                    <p className="text-clay font-medium">
+                      ₦{Number(product.price).toLocaleString()}
+                    </p>
+                  </div>
+                </a>
+                <div className="px-4 pb-4">
+                  {!inStock ? (
+                    <p className="text-xs text-ink/40 py-2">Out of stock</p>
+                  ) : canBuy ? (
+                    <AddToCartButton productId={product.id} stock={product.stock_qty} />
+                  ) : null}
+                </div>
               </div>
-              <div className="p-4">
-                <p className="font-display text-lg">{product.title}</p>
-                <p className="text-clay font-medium">
-                  ₦{Number(product.price).toLocaleString()}
-                </p>
-              </div>
-            </a>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
