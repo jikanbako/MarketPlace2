@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import AddToCartButton from '@/components/AddToCartButton';
 
 function useDebounced(value, delay = 350) {
   const [debounced, setDebounced] = useState(value);
@@ -18,9 +19,14 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
+  const [viewerId, setViewerId] = useState(null);
   const debouncedQuery = useDebounced(query);
 
   // Load the full category list once, independent of search/filter state
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setViewerId(data?.user?.id || null));
+  }, []);
+
   useEffect(() => {
     async function loadCategories() {
       const { data } = await supabase.from('products').select('category');
@@ -36,7 +42,7 @@ export default function ProductsPage() {
 
       let request = supabase
         .from('products')
-        .select('*, stores(id, name)')
+        .select('*, stores(id, name, owner_id, payments_enabled)')
         .order('created_at', { ascending: false });
 
       if (debouncedQuery.trim()) {
@@ -61,7 +67,7 @@ export default function ProductsPage() {
       if (error) {
         const { data: fallback } = await supabase
           .from('products')
-          .select('*, stores(id, name)')
+          .select('*, stores(id, name, owner_id, payments_enabled)')
           .order('created_at', { ascending: false });
         setProducts(fallback || []);
       } else {
@@ -108,34 +114,49 @@ export default function ProductsPage() {
         </p>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-          {products.map((product) => (
-            <a
-              key={product.id}
-              href={`/products/${product.id}`}
-              className="border border-ink/10 rounded-lg overflow-hidden hover:border-ink/30 transition-colors"
-            >
-              <div className="aspect-square bg-ink/5">
-                {product.photo_urls?.[0] ? (
-                  <img
-                    src={product.photo_urls[0]}
-                    alt={product.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-ink/30 text-xs">
-                    No image
+          {products.map((product) => {
+            const inStock = (product.stock_qty ?? 0) > 0;
+            const canBuy =
+              inStock &&
+              product.stores?.payments_enabled &&
+              product.stores?.owner_id !== viewerId;
+            return (
+              <div
+                key={product.id}
+                className="border border-ink/10 rounded-lg overflow-hidden hover:border-ink/30 transition-colors flex flex-col"
+              >
+                <a href={`/products/${product.id}`} className="block flex-1">
+                  <div className="aspect-square bg-ink/5">
+                    {product.photo_urls?.[0] ? (
+                      <img
+                        src={product.photo_urls[0]}
+                        alt={product.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-ink/30 text-xs">
+                        No image
+                      </div>
+                    )}
                   </div>
-                )}
+                  <div className="p-4 pb-2">
+                    <p className="font-display text-lg">{product.title}</p>
+                    <p className="text-ink/60 text-sm mb-1">{product.stores?.name}</p>
+                    <p className="text-clay font-medium">
+                      ₦{Number(product.price).toLocaleString()}
+                    </p>
+                  </div>
+                </a>
+                <div className="px-4 pb-4">
+                  {!inStock ? (
+                    <p className="text-xs text-ink/40 py-2">Out of stock</p>
+                  ) : canBuy ? (
+                    <AddToCartButton productId={product.id} stock={product.stock_qty} />
+                  ) : null}
+                </div>
               </div>
-              <div className="p-4">
-                <p className="font-display text-lg">{product.title}</p>
-                <p className="text-ink/60 text-sm mb-1">{product.stores?.name}</p>
-                <p className="text-clay font-medium">
-                  ₦{Number(product.price).toLocaleString()}
-                </p>
-              </div>
-            </a>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
