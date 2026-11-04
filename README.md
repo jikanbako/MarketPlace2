@@ -184,6 +184,12 @@ commission (that's a one-line change later — see "Commission" below).
 - A seller adds a bank account at `/dashboard/payouts`. The server turns
   that into a Paystack *subaccount* (`percentage_charge: 0`) and only
   keeps the last 4 digits of the account number.
+- **Where buyers find the buttons:** on every feed post that has a
+  product (a **Buy now · ₦…** button plus a 🛒 icon in the right-hand
+  column), on each card in `/products` and on store pages (**Add to
+  cart**), and on the product page itself (with a quantity picker). They
+  only appear when the seller has set up payouts, the item is in stock,
+  and it isn't your own product.
 - A buyer can **Buy now** (one product) or **Add to cart** (`/cart`) and
   check out (`/checkout`) with delivery details. A cart with products
   from several sellers is still **one payment**, split between them using
