@@ -7,6 +7,7 @@ const TABS = [
   { href: '/dashboard/posts/new', label: 'Post', icon: '➕' },
   { href: '/messages', label: 'Inbox', icon: '✉️' },
   { href: '/settings', label: 'Profile', icon: '👤' },
+  { href: '/feed', label: 'Feed', icon: '🌐' },
 ];
 
 export default function BottomNav() {
