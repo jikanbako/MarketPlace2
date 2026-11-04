@@ -4,10 +4,11 @@ import { usePathname } from 'next/navigation';
 
 const TABS = [
   { href: '/dashboard', label: 'Home', icon: '🏠' },
+  { href: '/feed', label: 'Feed', icon: '🌐' },
   { href: '/dashboard/posts/new', label: 'Post', icon: '➕' },
   { href: '/messages', label: 'Inbox', icon: '✉️' },
   { href: '/settings', label: 'Profile', icon: '👤' },
-  { href: '/feed', label: 'Feed', icon: '🌐' },
+  
 ];
 
 export default function BottomNav() {
