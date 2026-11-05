@@ -2,13 +2,36 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import {
+  BagIcon, BankIcon, BoxIcon, ChevronRightIcon, CompassIcon, EditIcon,
+  PhoneIcon, PlusIcon, PostIcon, SearchIcon, VerifiedIcon,
+} from '@/components/Icons';
 
 function StatCard({ label, value }) {
   return (
-    <div className="border border-ink/10 rounded-lg p-3 text-center">
-      <p className="font-display text-2xl">{Number(value || 0).toLocaleString()}</p>
-      <p className="text-xs text-ink/60">{label}</p>
+    <div className="bg-sand py-3 text-center">
+      <p className="font-display text-xl leading-none">{Number(value || 0).toLocaleString()}</p>
+      <p className="text-[11px] text-ink/50 mt-1.5">{label}</p>
     </div>
+  );
+}
+
+function ActionTile({ href, label, Icon, badge = 0 }) {
+  return (
+    <a
+      href={href}
+      className="relative flex flex-col items-center gap-2 rounded-2xl border border-ink/10 bg-white/30 py-3.5 active:scale-95 transition-transform"
+    >
+      <span className="w-10 h-10 rounded-full bg-ink/5 text-ink flex items-center justify-center">
+        <Icon size={20} />
+      </span>
+      <span className="text-xs font-medium">{label}</span>
+      {badge > 0 && (
+        <span className="absolute top-1.5 right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-clay text-white text-[10px] font-semibold flex items-center justify-center">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
+    </a>
   );
 }
 
@@ -29,6 +52,7 @@ export default function DashboardPage() {
   const [followedStores, setFollowedStores] = useState([]);
   const [stats, setStats] = useState({ followers: 0, products: 0, posts: 0, likes: 0, comments: 0, chats: 0 });
   const [loading, setLoading] = useState(true);
+  const [toShip, setToShip] = useState(0);
   const [error, setError] = useState(null);
 
   // create-store form state
@@ -93,7 +117,7 @@ export default function DashboardPage() {
   }
 
   async function loadSellerData(userId, storeId) {
-    const [followersRes, productsRes, postsRes, convosRes] = await Promise.all([
+    const [followersRes, productsRes, postsRes, convosRes, toShipRes] = await Promise.all([
       supabase.from('follows').select('*', { count: 'exact', head: true }).eq('followed_store_id', storeId),
       supabase.from('products').select('*').eq('store_id', storeId).order('created_at', { ascending: false }),
       supabase.from('posts').select('*').eq('store_id', storeId).order('created_at', { ascending: false }).limit(6),
@@ -103,7 +127,13 @@ export default function DashboardPage() {
         .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`)
         .order('last_message_at', { ascending: false })
         .limit(5),
+      supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('store_id', storeId)
+        .eq('status', 'paid'),
     ]);
+    setToShip(toShipRes.count || 0);
 
     const productRows = productsRes.data || [];
     const postRows = postsRes.data || [];
@@ -215,61 +245,105 @@ export default function DashboardPage() {
   const badge = store ? VERIFICATION_BADGE[store.verification_status] || VERIFICATION_BADGE.none : null;
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-10 space-y-10">
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-8">
       {/* Header */}
       {store ? (
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs text-ink/50 uppercase tracking-wide mb-1">My store</p>
-            <h1 className="font-display text-3xl">{store.name}</h1>
-            {store.category && <p className="text-ink/60 text-sm">{store.category}</p>}
-            {store.description && <p className="text-ink/70 mt-2">{store.description}</p>}
+        <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] text-ink/50 uppercase tracking-widest mb-1">My store</p>
+              <h1 className="font-display text-[28px] leading-tight flex items-center gap-2 flex-wrap">
+                <span className="break-words">{store.name}</span>
+                {store.verified && <VerifiedIcon size={20} className="text-sky-500 shrink-0" />}
+              </h1>
+              {store.category && <p className="text-ink/60 text-sm mt-0.5">{store.category}</p>}
+            </div>
+            <div className="shrink-0 flex items-center gap-2">
+              <a
+                href="/dashboard/store/edit"
+                aria-label="Edit store"
+                className="w-10 h-10 rounded-full border border-ink/15 text-ink/70 flex items-center justify-center"
+              >
+                <EditIcon size={18} />
+              </a>
+              <a
+                href={`/stores/${store.id}`}
+                className="h-10 px-4 rounded-full bg-ink text-sand text-sm flex items-center"
+              >
+                View store
+              </a>
+            </div>
+          </div>
+
+          {store.description && <p className="text-ink/70 text-sm mt-3">{store.description}</p>}
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-sm">
             {store.phone_number ? (
-              <p className="text-ink/60 text-sm mt-1">📞 {store.phone_number}</p>
+              <span className="inline-flex items-center gap-1.5 text-ink/60">
+                <PhoneIcon size={15} /> {store.phone_number}
+              </span>
             ) : (
-              <a href="/dashboard/store/edit" className="text-clay text-sm underline mt-1 inline-block">
+              <a href="/dashboard/store/edit" className="text-clay underline">
                 Add a phone number so buyers can reach you
               </a>
             )}
-            <a href="/dashboard/verify" className={`text-sm underline block ${badge.color}`}>
-              {badge.text}
-            </a>
-          </div>
-          <div className="shrink-0 flex flex-col gap-2 items-end">
-            <a href={`/stores/${store.id}`} className="border border-ink/20 px-4 py-2 rounded-md text-sm text-center">
-              View store
-            </a>
-            <a href="/dashboard/store/edit" className="text-xs underline text-ink/60">
-              Edit store
-            </a>
+            {!store.verified && (
+              <a href="/dashboard/verify" className={`underline ${badge.color}`}>
+                {badge.text}
+              </a>
+            )}
           </div>
         </div>
       ) : (
         <div>
-          <p className="text-xs text-ink/50 uppercase tracking-wide mb-1">Home</p>
-          <h1 className="font-display text-3xl mb-1">
+          <p className="text-[11px] text-ink/50 uppercase tracking-widest mb-1">Home</p>
+          <h1 className="font-display text-[28px] leading-tight mb-1">
             Welcome{profile?.full_name ? `, ${profile.full_name}` : ''}
           </h1>
-          <p className="text-ink/60">Discover stores, products, and people worth following.</p>
+          <p className="text-ink/60 text-sm">Discover stores, products, and people worth following.</p>
         </div>
       )}
 
-      {/* Payments nudge — sellers who can't be paid yet */}
-      {store && !store.payments_enabled && (
+      {/* Things that need the seller's attention, most urgent first */}
+      {store && toShip > 0 && (
         <a
-          href="/dashboard/payouts"
-          className="block border border-clay/40 bg-clay/5 rounded-lg p-4"
+          href="/dashboard/orders"
+          className="flex items-center gap-3 rounded-2xl bg-ink text-sand p-4"
         >
-          <p className="font-medium text-sm text-clay">Set up payouts to start getting paid</p>
-          <p className="text-xs text-ink/60 mt-1">
-            Add your bank account so buyers can pay you through BuyLink. It takes a minute.
-          </p>
+          <span className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+            <BoxIcon size={20} />
+          </span>
+          <span className="flex-1">
+            <span className="block font-medium text-sm">
+              {toShip} {toShip === 1 ? 'order is' : 'orders are'} waiting to ship
+            </span>
+            <span className="block text-xs text-sand/70 mt-0.5">Tap to see delivery details</span>
+          </span>
+          <ChevronRightIcon size={18} className="text-sand/60" />
         </a>
       )}
 
-      {/* Stats — sellers only */}
+      {store && !store.payments_enabled && (
+        <a
+          href="/dashboard/payouts"
+          className="flex items-center gap-3 rounded-2xl border border-clay/30 bg-clay/5 p-4"
+        >
+          <span className="w-10 h-10 rounded-full bg-clay/15 text-clay flex items-center justify-center shrink-0">
+            <BankIcon size={20} />
+          </span>
+          <span className="flex-1">
+            <span className="block font-medium text-sm">Set up payouts to start getting paid</span>
+            <span className="block text-xs text-ink/60 mt-0.5">
+              Add your bank account — it takes a minute.
+            </span>
+          </span>
+          <ChevronRightIcon size={18} className="text-ink/40" />
+        </a>
+      )}
+
+      {/* Stats — sellers only. One compact card instead of six big boxes. */}
       {store && (
-        <section className="grid grid-cols-3 gap-3">
+        <section className="grid grid-cols-3 gap-px bg-ink/10 border border-ink/10 rounded-2xl overflow-hidden">
           <StatCard label="Followers" value={stats.followers} />
           <StatCard label="Products" value={stats.products} />
           <StatCard label="Posts" value={stats.posts} />
@@ -280,44 +354,20 @@ export default function DashboardPage() {
       )}
 
       {/* Quick actions */}
-      <section className="grid grid-cols-2 gap-3">
+      <section className="grid grid-cols-4 gap-2">
         {store ? (
           <>
-            <a href="/dashboard/products/new" className="border border-ink/10 rounded-lg p-4 hover:border-ink/30">
-              <p className="text-xl mb-1">＋</p>
-              <p className="font-medium text-sm">Add product</p>
-            </a>
-            <a href="/dashboard/posts/new" className="border border-ink/10 rounded-lg p-4 hover:border-ink/30">
-              <p className="text-xl mb-1">＋</p>
-              <p className="font-medium text-sm">Create post</p>
-            </a>
-            <a href="/dashboard/orders" className="border border-ink/10 rounded-lg p-4 hover:border-ink/30">
-              <p className="text-xl mb-1">📦</p>
-              <p className="font-medium text-sm">Orders</p>
-            </a>
-            <a href="/dashboard/payouts" className="border border-ink/10 rounded-lg p-4 hover:border-ink/30">
-              <p className="text-xl mb-1">🏦</p>
-              <p className="font-medium text-sm">Payouts</p>
-            </a>
+            <ActionTile href="/dashboard/products/new" label="Product" Icon={PlusIcon} />
+            <ActionTile href="/dashboard/posts/new" label="Post" Icon={PostIcon} />
+            <ActionTile href="/dashboard/orders" label="Orders" Icon={BoxIcon} badge={toShip} />
+            <ActionTile href="/dashboard/payouts" label="Payouts" Icon={BankIcon} />
           </>
         ) : (
           <>
-            <a href="/feed" className="border border-ink/10 rounded-lg p-4 hover:border-ink/30">
-              <p className="text-xl mb-1">🏠</p>
-              <p className="font-medium text-sm">Discover feed</p>
-            </a>
-            <a href="/products" className="border border-ink/10 rounded-lg p-4 hover:border-ink/30">
-              <p className="text-xl mb-1">🔍</p>
-              <p className="font-medium text-sm">Browse products</p>
-            </a>
-            <a href="/cart" className="border border-ink/10 rounded-lg p-4 hover:border-ink/30">
-              <p className="text-xl mb-1">🛒</p>
-              <p className="font-medium text-sm">My cart</p>
-            </a>
-            <a href="/orders" className="border border-ink/10 rounded-lg p-4 hover:border-ink/30">
-              <p className="text-xl mb-1">📦</p>
-              <p className="font-medium text-sm">My orders</p>
-            </a>
+            <ActionTile href="/feed" label="Feed" Icon={CompassIcon} />
+            <ActionTile href="/products" label="Browse" Icon={SearchIcon} />
+            <ActionTile href="/cart" label="Cart" Icon={BagIcon} />
+            <ActionTile href="/orders" label="Orders" Icon={BoxIcon} />
           </>
         )}
       </section>
