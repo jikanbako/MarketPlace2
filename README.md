@@ -238,6 +238,22 @@ commission (that's a one-line change later — see "Commission" below).
   in `app/api/checkout/initialize/route.js` (the main account's share is
   whatever is left over after the sellers' flat shares).
 
+## Design notes
+
+- **Icons** all live in `components/Icons.jsx` (one consistent line-icon
+  set). Use those instead of emoji so every screen matches on every phone.
+- **The feed is pinned, not sized with `vh`.** `/feed` anchors itself between
+  the top of the screen and the bottom tab bar (`top`/`bottom` offsets), so
+  it always matches the area you can actually see. The bottom offset
+  (`3.5rem` + safe area) must stay equal to the height set in
+  `components/BottomNav.jsx` — change one, change the other. (The old
+  `100vh` sizing is what hid the Buy button behind the tab bar on phones,
+  because `100vh` includes the area under the browser's address bar.)
+- On phones the top bar hides on `/feed`; the feed draws its own header with
+  the For you / Following tabs, search, and the cart.
+- Category chips, product cards, and the dashboard use the same palette
+  (`sand` / `ink` / `clay` / `moss`) from `tailwind.config.js`.
+
 ## Notes
 
 - Auth and RLS are wired so a seller can only edit their own store/products,
