@@ -49,7 +49,7 @@ export default function RootLayout({ children }) {
         <NavBar />
         <InstallPrompt />
         <BannedBanner />
-        <main className="pb-16 md:pb-0">{children}</main>
+        <main className="pb-[calc(4.5rem_+_env(safe-area-inset-bottom,0px))] md:pb-0">{children}</main>
         <BottomNav />
       </body>
     </html>
