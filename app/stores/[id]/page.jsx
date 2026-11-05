@@ -148,21 +148,22 @@ export default function StorePage() {
       {products.length === 0 ? (
         <p className="text-ink/60">This store hasn't listed any products yet.</p>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-5">
           {products.map((product) => {
             const inStock = (product.stock_qty ?? 0) > 0;
             const canBuy = inStock && store.payments_enabled && !isOwner;
             return (
               <div
                 key={product.id}
-                className="border border-ink/10 rounded-lg overflow-hidden hover:border-ink/30 transition-colors flex flex-col"
+                className="rounded-2xl overflow-hidden border border-ink/10 bg-white/30 flex flex-col"
               >
-                <a href={`/products/${product.id}`} className="block flex-1">
-                  <div className="aspect-square bg-ink/5">
+                <a href={`/products/${product.id}`} className="block relative">
+                  <div className="aspect-[4/5] bg-ink/5">
                     {product.photo_urls?.[0] ? (
                       <img
                         src={product.photo_urls[0]}
                         alt={product.title}
+                        loading="lazy"
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -171,19 +172,20 @@ export default function StorePage() {
                       </div>
                     )}
                   </div>
-                  <div className="p-4 pb-2">
-                    <p className="font-display text-lg">{product.title}</p>
-                    <p className="text-clay font-medium">
-                      ₦{Number(product.price).toLocaleString()}
-                    </p>
-                  </div>
+                  {!inStock && (
+                    <span className="absolute top-2 left-2 text-[11px] font-medium bg-ink/80 text-sand px-2 py-0.5 rounded-full">
+                      Sold out
+                    </span>
+                  )}
                 </a>
-                <div className="px-4 pb-4">
-                  {!inStock ? (
-                    <p className="text-xs text-ink/40 py-2">Out of stock</p>
-                  ) : canBuy ? (
-                    <AddToCartButton productId={product.id} stock={product.stock_qty} />
-                  ) : null}
+                <div className="p-3 flex flex-col gap-0.5 flex-1">
+                  <a href={`/products/${product.id}`} className="block">
+                    <p className="text-[15px] font-medium leading-snug line-clamp-2">{product.title}</p>
+                  </a>
+                  <div className="flex items-center justify-between mt-auto pt-2">
+                    <p className="font-semibold text-clay">₦{Number(product.price).toLocaleString()}</p>
+                    {canBuy && <AddToCartButton variant="compact" productId={product.id} stock={product.stock_qty} />}
+                  </div>
                 </div>
               </div>
             );
