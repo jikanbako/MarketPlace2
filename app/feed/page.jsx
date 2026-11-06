@@ -1,13 +1,43 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import AddToCartButton from '@/components/AddToCartButton';
 import useCartCount from '@/components/useCartCount';
+import { formatCount } from '@/lib/format';
 import {
   BagIcon, CheckIcon, CommentIcon, HeartIcon, PhoneIcon, PlayIcon, PlusIcon,
   SearchIcon, SendIcon, VerifiedIcon, VolumeIcon, VolumeOffIcon,
 } from '@/components/Icons';
+
+// Orders the "For you" feed. It's a weighted shuffle: every post gets a
+// random number, nudged up a little for being recent, well-liked, or from
+// a store you follow — so the feed is different each time you open it, but
+// brand-new and popular posts tend to surface sooner than stale ones.
+// Then it spreads things out so the same store never appears twice in a row.
+function rankPosts(posts, followedIds) {
+  const now = Date.now();
+
+  const scored = posts
+    .map((post) => {
+      const ageHours = Math.max(0, (now - new Date(post.created_at).getTime()) / 36e5);
+      const freshness = 1 / (1 + ageHours / 48); // fades over a couple of days
+      const engagement = Math.min(Math.log1p((post.likes_count || 0) + 2 * (post.comments_count || 0)) / 4, 1);
+      const followed = followedIds.includes(post.store_id) ? 0.25 : 0;
+      return { post, score: Math.random() + 0.6 * freshness + 0.3 * engagement + followed };
+    })
+    .sort((a, b) => b.score - a.score)
+    .map((entry) => entry.post);
+
+  const result = [];
+  const remaining = [...scored];
+  while (remaining.length > 0) {
+    const lastStore = result.length ? result[result.length - 1].store_id : null;
+    const index = remaining.findIndex((p) => p.store_id !== lastStore);
+    result.push(...remaining.splice(index === -1 ? 0 : index, 1));
+  }
+  return result;
+}
 
 // A round translucent button used for the right-hand action column
 function ActionButton({ onClick, label, count, children, active, disabled }) {
@@ -233,11 +263,11 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow, sou
             )}
           </div>
 
-          <ActionButton onClick={toggleLike} label="Like" count={likesCount} active={liked} disabled={busy}>
+          <ActionButton onClick={toggleLike} label="Like" count={formatCount(likesCount)} active={liked} disabled={busy}>
             <HeartIcon size={24} filled={liked} />
           </ActionButton>
 
-          <ActionButton onClick={() => onOpenComments(post)} label="Comments" count={post.comments_count}>
+          <ActionButton onClick={() => onOpenComments(post)} label="Comments" count={formatCount(post.comments_count)}>
             <CommentIcon size={24} />
           </ActionButton>
 
@@ -256,6 +286,11 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow, sou
             {post.stores?.name}
             {post.stores?.verified && <VerifiedIcon size={15} className="text-sky-400" />}
           </a>
+          <span className="text-xs text-white/65 ml-0.5">
+            {' · '}
+            {formatCount(post.stores?.followers_count)}{' '}
+            {Number(post.stores?.followers_count) === 1 ? 'follower' : 'followers'}
+          </span>
 
           {post.caption && (
             <p className="text-sm mt-1 line-clamp-2 text-white/90">{post.caption}</p>
@@ -446,6 +481,11 @@ export default function FeedPage() {
   const [activeComments, setActiveComments] = useState(null);
   const [tab, setTab] = useState('forYou'); // 'forYou' | 'following'
   const [followedStoreIds, setFollowedStoreIds] = useState([]);
+  // The "For you" order is decided once per visit (and again when you tap
+  // "For you" while already on it) — NOT recomputed when you follow someone,
+  // or the feed would reshuffle under your thumb.
+  const [orderIds, setOrderIds] = useState([]);
+  const scrollRef = useRef(null);
   // Starts muted (every browser requires that for autoplay); one tap on the
   // speaker turns sound on for every video for the rest of the session.
   const [soundOn, setSoundOn] = useState(false);
@@ -458,26 +498,64 @@ export default function FeedPage() {
       const { data } = await supabase
         .from('posts')
         .select(
-          '*, stores(name, owner_id, phone_number, payments_enabled, verified, logo_url), products(title, price, stock_qty, photo_urls)'
+          '*, stores(name, owner_id, phone_number, payments_enabled, verified, logo_url, followers_count), products(title, price, stock_qty, photo_urls)'
         )
-        .order('created_at', { ascending: false });
-      setPosts(data || []);
+        .order('created_at', { ascending: false })
+        .limit(80);
+      const loaded = data || [];
+      setPosts(loaded);
 
+      let followedIds = [];
       if (currentUser) {
         const { data: follows } = await supabase
           .from('follows')
           .select('followed_store_id')
           .eq('follower_id', currentUser.id);
-        setFollowedStoreIds((follows || []).map((f) => f.followed_store_id));
+        followedIds = (follows || []).map((f) => f.followed_store_id);
+        setFollowedStoreIds(followedIds);
       }
 
+      setOrderIds(rankPosts(loaded, followedIds).map((p) => p.id));
       setLoading(false);
     }
     load();
   }, []);
 
+  const postById = useMemo(() => Object.fromEntries(posts.map((p) => [p.id, p])), [posts]);
+
+  // "Following" stays newest-first (that's what people expect there);
+  // "For you" uses the shuffled order.
   const visiblePosts =
-    tab === 'following' ? posts.filter((p) => followedStoreIds.includes(p.store_id)) : posts;
+    tab === 'following'
+      ? posts.filter((p) => followedStoreIds.includes(p.store_id))
+      : orderIds.map((id) => postById[id]).filter(Boolean);
+
+  function handleTab(key) {
+    if (key === tab && key === 'forYou') {
+      // Tapping "For you" again = refresh with a new shuffle
+      setOrderIds(rankPosts(posts, followedStoreIds).map((p) => p.id));
+      scrollRef.current?.scrollTo({ top: 0 });
+    } else {
+      setTab(key);
+    }
+  }
+
+  // Keep the follower count on screen in step with what you just did
+  function adjustFollowers(storeId, delta) {
+    setPosts((current) =>
+      current.map((p) =>
+        p.store_id === storeId
+          ? {
+              ...p,
+              stores: {
+                ...p.stores,
+                followers_count: Math.max(0, (Number(p.stores?.followers_count) || 0) + delta),
+              },
+            }
+          : p
+      )
+    );
+  }
 
   async function handleToggleFollow(storeId, isFollowing) {
     if (isFollowing) {
@@ -491,6 +569,7 @@ export default function FeedPage() {
         return;
       }
       setFollowedStoreIds((ids) => ids.filter((id) => id !== storeId));
+      adjustFollowers(storeId, -1);
     } else {
       const { error } = await supabase
         .from('follows')
@@ -500,6 +579,7 @@ export default function FeedPage() {
         return;
       }
       setFollowedStoreIds((ids) => [...ids, storeId]);
+      adjustFollowers(storeId, +1);
     }
   }
 
@@ -542,7 +622,7 @@ export default function FeedPage() {
     );
   } else {
     body = (
-      <div className="h-full overflow-y-scroll snap-y snap-mandatory overscroll-contain no-scrollbar">
+      <div ref={scrollRef} className="h-full overflow-y-scroll snap-y snap-mandatory overscroll-contain no-scrollbar">
         {visiblePosts.map((post) => (
           <PostCard
             key={post.id}
@@ -565,7 +645,7 @@ export default function FeedPage() {
           top/bottom anchors (not 100vh) means it always matches the area
           you can actually see, even with the browser's address bar showing. */}
       <div className="fixed inset-x-0 top-0 bottom-[calc(3.5rem_+_env(safe-area-inset-bottom,0px))] md:top-[57px] md:bottom-0 z-20 bg-black text-white">
-        <FeedHeader tab={tab} setTab={setTab} />
+        <FeedHeader tab={tab} setTab={handleTab} />
         {body}
       </div>
 
