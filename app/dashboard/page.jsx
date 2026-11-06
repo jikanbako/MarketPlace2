@@ -121,7 +121,7 @@ export default function DashboardPage() {
   }
 
   async function loadSellerData(userId, storeId) {
-    const [followersRes, productsRes, postsRes, convosRes, toShipRes] = await Promise.all([
+    const [followersRes, productsRes, postsRes, convosRes, toShipRes, postTotalsRes, chatsCountRes] = await Promise.all([
       supabase.from('follows').select('*', { count: 'exact', head: true }).eq('followed_store_id', storeId),
       supabase.from('products').select('*').eq('store_id', storeId).order('created_at', { ascending: false }),
       supabase.from('posts').select('*').eq('store_id', storeId).order('created_at', { ascending: false }).limit(6),
@@ -136,6 +136,17 @@ export default function DashboardPage() {
         .select('*', { count: 'exact', head: true })
         .eq('store_id', storeId)
         .eq('status', 'paid'),
+      // True totals across ALL of this store's posts and chats. (The lists
+      // above are deliberately capped to a handful for display, so they
+      // can't be used to count anything.)
+      supabase
+        .from('posts')
+        .select('likes_count, comments_count', { count: 'exact' })
+        .eq('store_id', storeId),
+      supabase
+        .from('conversations')
+        .select('*', { count: 'exact', head: true })
+        .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`),
     ]);
     setToShip(toShipRes.count || 0);
 
@@ -172,16 +183,17 @@ export default function DashboardPage() {
       }));
     }
 
-    const totalLikes = productRows.length >= 0 ? postRows.reduce((sum, p) => sum + (p.likes_count || 0), 0) : 0;
-    const totalComments = postRows.reduce((sum, p) => sum + (p.comments_count || 0), 0);
+    const allPosts = postTotalsRes.data || [];
+    const totalLikes = allPosts.reduce((sum, p) => sum + (p.likes_count || 0), 0);
+    const totalComments = allPosts.reduce((sum, p) => sum + (p.comments_count || 0), 0);
 
     setStats({
       followers: followersRes.count || 0,
       products: productRows.length,
-      posts: postRows.length,
+      posts: postTotalsRes.count ?? allPosts.length,
       likes: totalLikes,
       comments: totalComments,
-      chats: convoRows.length,
+      chats: chatsCountRes.count ?? convoRows.length,
     });
     setProducts(productRows);
     setPosts(postRows);
