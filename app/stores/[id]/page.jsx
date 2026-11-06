@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import AddToCartButton from '@/components/AddToCartButton';
+import { PhoneIcon, VerifiedIcon } from '@/components/Icons';
 
 export default function StorePage() {
   const { id } = useParams();
@@ -15,6 +16,7 @@ export default function StorePage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [followError, setFollowError] = useState(null);
+  const [coverOpen, setCoverOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -101,48 +103,86 @@ export default function StorePage() {
   const isOwner = user && store.owner_id === user.id;
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-12">
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl mb-1">
-            {store.name}
-            {store.verified && <span className="text-moss text-lg ml-2" title="Verified">✓</span>}
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+      <div className="rounded-3xl overflow-hidden border border-ink/10 bg-white/30 mb-8">
+        {/* Cover photo / poster */}
+        <div className="relative h-44 sm:h-64 bg-ink">
+          {store.cover_url ? (
+            <button
+              type="button"
+              onClick={() => setCoverOpen(true)}
+              aria-label="View cover full size"
+              className="absolute inset-0 w-full h-full"
+            >
+              <img src={store.cover_url} alt="" className="w-full h-full object-cover" />
+            </button>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-clay via-clay/80 to-ink" />
+          )}
+        </div>
+
+        <div className="px-4 sm:px-6 pb-5">
+          <div className="flex items-end justify-between gap-3 -mt-9">
+            <div className="relative z-10 w-[72px] h-[72px] rounded-2xl border-4 border-sand bg-sand overflow-hidden flex items-center justify-center font-display text-3xl text-ink shrink-0 shadow-sm">
+              {store.logo_url ? (
+                <img src={store.logo_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                (store.name || 'B').trim().charAt(0).toUpperCase()
+              )}
+            </div>
+
+            <div className="pb-1 text-right">
+              {isOwner ? (
+                <a href="/dashboard" className="inline-block px-5 py-2 rounded-full border border-ink/20 text-sm">
+                  Manage store
+                </a>
+              ) : (
+                <>
+                  <button
+                    onClick={following ? toggleFollow : (user ? toggleFollow : () => (window.location.href = '/login'))}
+                    disabled={busy}
+                    className={`px-6 py-2 rounded-full text-sm font-medium disabled:opacity-50 ${
+                      following ? 'border border-ink/20 text-ink' : 'bg-ink text-sand'
+                    }`}
+                  >
+                    {following ? 'Following' : 'Follow'}
+                  </button>
+                  {followError && <p className="text-clay text-xs mt-1 max-w-[180px]">{followError}</p>}
+                </>
+              )}
+            </div>
+          </div>
+
+          <h1 className="font-display text-[26px] sm:text-3xl leading-tight mt-3 flex items-center gap-2 flex-wrap">
+            <span className="break-words">{store.name}</span>
+            {store.verified && <VerifiedIcon size={20} className="text-sky-500 shrink-0" />}
           </h1>
-          {store.category && <p className="text-ink/60 text-sm mb-2">{store.category}</p>}
-          {store.description && <p className="text-ink/70 max-w-xl mb-2">{store.description}</p>}
+          {store.category && <p className="text-ink/60 text-sm mt-0.5">{store.category}</p>}
+          {store.description && <p className="text-ink/70 text-sm mt-3 max-w-xl">{store.description}</p>}
+
           {store.phone_number && (
-            <div className="flex gap-2 mb-2">
-              <a href={`tel:${store.phone_number}`} className="text-xs px-3 py-1.5 border border-ink/20 rounded-full">
-                📞 {store.phone_number}
+            <div className="flex gap-2 mt-3">
+              <a
+                href={`tel:${store.phone_number}`}
+                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 border border-ink/20 rounded-full"
+              >
+                <PhoneIcon size={14} /> {store.phone_number}
               </a>
               <a
                 href={`https://wa.me/${store.phone_number.replace(/[^0-9]/g, '')}`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs px-3 py-1.5 bg-moss text-sand rounded-full"
+                className="inline-flex items-center text-xs px-3 py-1.5 bg-moss text-sand rounded-full"
               >
                 WhatsApp
               </a>
             </div>
           )}
-          <p className="text-sm text-ink/50">
+
+          <p className="text-sm text-ink/50 mt-3">
             {followerCount} {followerCount === 1 ? 'follower' : 'followers'}
           </p>
         </div>
-        {!isOwner && (
-          <div className="shrink-0 text-right">
-            <button
-              onClick={following ? toggleFollow : (user ? toggleFollow : () => (window.location.href = '/login'))}
-              disabled={busy}
-              className={`px-5 py-2 rounded-md text-sm disabled:opacity-50 ${
-                following ? 'border border-ink/20 text-ink' : 'bg-ink text-sand'
-              }`}
-            >
-              {following ? 'Following' : 'Follow'}
-            </button>
-            {followError && <p className="text-clay text-xs mt-1 max-w-[180px]">{followError}</p>}
-          </div>
-        )}
       </div>
 
       {products.length === 0 ? (
@@ -190,6 +230,23 @@ export default function StorePage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {coverOpen && store.cover_url && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-3"
+          onClick={() => setCoverOpen(false)}
+        >
+          <img src={store.cover_url} alt={`${store.name} cover`} className="max-h-full max-w-full object-contain" />
+          <button
+            type="button"
+            aria-label="Close"
+            className="absolute right-4 w-10 h-10 rounded-full bg-white/15 text-white text-xl flex items-center justify-center"
+            style={{ top: 'calc(1rem + env(safe-area-inset-top, 0px))' }}
+          >
+            ✕
+          </button>
         </div>
       )}
     </div>
