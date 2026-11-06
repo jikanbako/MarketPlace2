@@ -30,6 +30,7 @@ create table if not exists stores (
   description text,
   category text,
   logo_url text,
+  cover_url text,
   verified boolean default false,
   verification_status text default 'none',
   id_document_url text,
@@ -126,6 +127,8 @@ alter table stores add column if not exists business_proof_url text;
 alter table stores add column if not exists verification_note text;
 alter table stores add column if not exists verification_submitted_at timestamptz;
 alter table stores add column if not exists payments_enabled boolean default false;
+-- Banner photo / poster shown at the top of a store's dashboard and public page
+alter table stores add column if not exists cover_url text;
 
 alter table posts alter column product_id drop not null;
 
