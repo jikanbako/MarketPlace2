@@ -80,6 +80,12 @@ Next.js and Supabase.
     regression in an earlier draft that's now fixed
   - A prompt to add a phone number appears in the header if you
     haven't set one yet (it's what shows up on your feed posts)
+- **Store cover photo / poster** — the top of `/dashboard` is a store card
+  with a banner the seller can add, change, or remove right there (tap the
+  banner to view it full-size, so a poster can be read in full). Photos
+  are shrunk in the browser before upload (`lib/imageResize.js`) so they
+  upload quickly on mobile data. Buyers see the same card on `/stores/[id]`.
+  Needs the `stores.cover_url` column — re-run `supabase/schema.sql`.
 - `/dashboard/store/edit` — edit your store's name, category,
   description, and **phone number** (shown on your feed posts as
   call/WhatsApp chips — leave it blank to keep it hidden)
