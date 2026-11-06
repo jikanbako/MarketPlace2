@@ -199,21 +199,21 @@ begin
   update posts set likes_count = likes_count + 1 where id = new.post_id;
   return new;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer set search_path = public;
 
 create or replace function public.decrement_likes_count() returns trigger as $$
 begin
   update posts set likes_count = greatest(likes_count - 1, 0) where id = old.post_id;
   return old;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer set search_path = public;
 
 create or replace function public.increment_comments_count() returns trigger as $$
 begin
   update posts set comments_count = comments_count + 1 where id = new.post_id;
   return new;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer set search_path = public;
 
 -- Blocks a non-admin from approving their own store verification or
 -- setting `verified` directly — see the long comment further down for why.
@@ -977,3 +977,98 @@ grant execute on function public.update_order_status(uuid, text) to authenticate
 -- left callable, any visitor could trigger a notification to anyone.
 -- Triggers still work because they run as the function owner.
 revoke all on function public.notify_push(uuid, text, text, text) from public, anon, authenticated;
+
+
+-- ============================================================
+-- REAL COUNTS — likes, comments, followers
+--
+-- Why this section exists: the like/comment counter triggers used to run
+-- with the permissions of whoever liked or commented. Only a store's
+-- owner may edit its posts, so for everyone else the counter update was
+-- silently filtered out by Row Level Security and the numbers never moved.
+-- The counter functions above are now SECURITY DEFINER, which fixes that.
+-- This section adds the rest: a follower counter, decrementing when a
+-- comment is deleted, protection so nobody can type their own numbers,
+-- and a one-off recount that repairs everything counted wrongly so far.
+-- ============================================================
+
+alter table stores add column if not exists followers_count integer not null default 0;
+
+create or replace function public.increment_followers_count() returns trigger as $$
+begin
+  update stores set followers_count = followers_count + 1 where id = new.followed_store_id;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+create or replace function public.decrement_followers_count() returns trigger as $$
+begin
+  update stores set followers_count = greatest(followers_count - 1, 0) where id = old.followed_store_id;
+  return old;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists on_follow_count_insert on follows;
+create trigger on_follow_count_insert after insert on follows
+  for each row execute function public.increment_followers_count();
+
+drop trigger if exists on_follow_count_delete on follows;
+create trigger on_follow_count_delete after delete on follows
+  for each row execute function public.decrement_followers_count();
+
+create or replace function public.decrement_comments_count() returns trigger as $$
+begin
+  update posts set comments_count = greatest(comments_count - 1, 0) where id = old.post_id;
+  return old;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists on_comment_delete on comments;
+create trigger on_comment_delete after delete on comments
+  for each row execute function public.decrement_comments_count();
+
+-- Without these, a store owner could simply run
+--   update posts set likes_count = 1000000
+-- (the "owners can update their own posts" policy allows it). The counters
+-- are only allowed to change from inside the counting triggers above
+-- (trigger depth 2+) or from the database owner / server.
+-- These two functions deliberately are NOT security definer: they need to
+-- see who is really making the request.
+create or replace function public.protect_post_counters() returns trigger as $$
+begin
+  if pg_trigger_depth() < 2 and current_user not in ('postgres', 'supabase_admin', 'service_role') then
+    new.likes_count := old.likes_count;
+    new.comments_count := old.comments_count;
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists on_post_protect_counters on posts;
+create trigger on_post_protect_counters before update on posts
+  for each row execute function public.protect_post_counters();
+
+create or replace function public.protect_store_counters() returns trigger as $$
+begin
+  if pg_trigger_depth() < 2 and current_user not in ('postgres', 'supabase_admin', 'service_role') then
+    new.followers_count := old.followers_count;
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists on_store_protect_counters on stores;
+create trigger on_store_protect_counters before update on stores
+  for each row execute function public.protect_store_counters();
+
+-- Repair: set every counter to the true number. Only touches rows that
+-- are wrong, and it's safe to run again any time.
+update posts p
+set likes_count = (select count(*) from likes l where l.post_id = p.id),
+    comments_count = (select count(*) from comments c where c.post_id = p.id)
+where p.likes_count is distinct from (select count(*) from likes l where l.post_id = p.id)
+   or p.comments_count is distinct from (select count(*) from comments c where c.post_id = p.id);
+
+update stores s
+set followers_count = (select count(*) from follows f where f.followed_store_id = s.id)
+where s.followers_count is distinct from (select count(*) from follows f where f.followed_store_id = s.id);
