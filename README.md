@@ -244,6 +244,24 @@ commission (that's a one-line change later — see "Commission" below).
   in `app/api/checkout/initialize/route.js` (the main account's share is
   whatever is left over after the sellers' flat shares).
 
+## Feed order and counts
+
+- **"For you" is shuffled**, not newest-first: every post gets a random
+  number nudged up for being recent, liked/commented, or from a store you
+  follow, and the same store never appears twice in a row. The order is
+  picked once per visit — following someone doesn't reshuffle it — and
+  tapping "For you" again gives a fresh shuffle. "Following" stays
+  newest-first. It loads the 80 most recent posts.
+- **Like, comment, and follower counts are real.** They're kept by database
+  triggers (`likes_count`, `comments_count` on posts, `followers_count` on
+  stores). Those triggers used to run with the liker's permissions, so
+  Row Level Security silently blocked the count update for everyone except
+  the post's owner. They're now `security definer`, comment deletes
+  decrement too, nobody can edit the counters by hand, and re-running
+  `supabase/schema.sql` recounts everything from the real rows.
+- The dashboard's Posts / Likes / Comments / Chats are true totals, not
+  counts of the short lists shown below them.
+
 ## Design notes
 
 - **Icons** all live in `components/Icons.jsx` (one consistent line-icon
