@@ -6,7 +6,7 @@ import AddToCartButton from '@/components/AddToCartButton';
 import useCartCount from '@/components/useCartCount';
 import { formatCount } from '@/lib/format';
 import {
-  BagIcon, CheckIcon, CommentIcon, HeartIcon, PhoneIcon, PlayIcon, PlusIcon,
+  BagIcon, CheckIcon, ChevronRightIcon, CommentIcon, HeartIcon, PhoneIcon, PlayIcon, PlusIcon,
   SearchIcon, SendIcon, VerifiedIcon, VolumeIcon, VolumeOffIcon,
 } from '@/components/Icons';
 
@@ -40,13 +40,13 @@ function rankPosts(posts, followedIds) {
 }
 
 // A round translucent button used for the right-hand action column
-function ActionButton({ onClick, label, count, children, active, disabled }) {
+function ActionButton({ onClick, label, count, children, active, disabled, dim }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className="flex flex-col items-center gap-1 active:scale-90 transition-transform disabled:opacity-50"
+      className={`flex flex-col items-center gap-1 active:scale-90 transition-transform disabled:opacity-50 ${dim ? 'opacity-60' : ''}`}
     >
       <span
         className={`w-11 h-11 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-sm ${
@@ -68,6 +68,7 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow, sou
   const [busy, setBusy] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [notice, setNotice] = useState(null);
   const videoRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -169,9 +170,26 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow, sou
 
   const isOwner = user?.id === post.stores?.owner_id;
   const stock = post.products?.stock_qty ?? 0;
-  // Buyable only if it has a product, the seller can receive payments,
-  // it's in stock, and it isn't the viewer's own product.
-  const canBuy = !!post.product_id && !isOwner && !!post.stores?.payments_enabled && stock > 0;
+  const hasProduct = !!post.product_id && !!post.products;
+
+  // The Buy now / Cart buttons are shown on EVERY post that has a product.
+  // When one can't be used, it stays visible but dimmed, and tapping it
+  // says why — instead of vanishing and leaving people wondering.
+  let blockReason = null;
+  if (hasProduct) {
+    if (isOwner) blockReason = 'This is your own product.';
+    else if (stock <= 0) blockReason = 'This item is sold out.';
+    else if (!post.stores?.payments_enabled) {
+      blockReason = "This seller hasn't set up payments yet. Message them to arrange the purchase.";
+    }
+  }
+  const canBuy = hasProduct && !blockReason;
+
+  function showNotice(message) {
+    setNotice(message);
+    setTimeout(() => setNotice(null), 4000);
+  }
+
   const thumb = post.products?.photo_urls?.[0];
 
   const phone = post.stores?.phone_number;
@@ -272,6 +290,11 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow, sou
           </ActionButton>
 
           {canBuy && <AddToCartButton variant="icon" productId={post.product_id} stock={stock} />}
+          {hasProduct && !canBuy && (
+            <ActionButton onClick={() => showNotice(blockReason)} label="Add to cart" count="Cart" dim>
+              <BagIcon size={22} />
+            </ActionButton>
+          )}
 
           {!isOwner && (
             <ActionButton onClick={handleMessage} label="Message seller">
@@ -296,7 +319,7 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow, sou
             <p className="text-sm mt-1 line-clamp-2 text-white/90">{post.caption}</p>
           )}
 
-          {post.product_id && post.products && (
+          {hasProduct ? (
             <div className="mt-3 flex items-center gap-3 rounded-2xl bg-white/15 backdrop-blur-md p-2 pr-3">
               <a href={`/products/${post.product_id}`} className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="w-11 h-11 rounded-xl bg-white/20 overflow-hidden shrink-0">
@@ -315,14 +338,34 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow, sou
                 >
                   Buy now
                 </a>
-              ) : stock <= 0 ? (
-                <span className="shrink-0 text-xs text-white/70">Sold out</span>
               ) : (
-                <a href={`/products/${post.product_id}`} className="shrink-0 text-xs underline">
-                  View
-                </a>
+                <button
+                  type="button"
+                  onClick={() => showNotice(blockReason)}
+                  className="shrink-0 bg-white/25 text-white/80 text-xs font-semibold rounded-full px-4 py-2"
+                >
+                  {stock <= 0 ? 'Sold out' : 'Buy now'}
+                </button>
               )}
             </div>
+          ) : (
+            <a
+              href={`/stores/${post.store_id}`}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md px-4 py-2 text-xs font-medium"
+            >
+              Shop this store <ChevronRightIcon size={14} />
+            </a>
+          )}
+
+          {notice && (
+            <p className="mt-2 text-xs leading-snug bg-black/65 backdrop-blur-md rounded-xl px-3 py-2">
+              {notice}
+              {!isOwner && stock > 0 && (
+                <button type="button" onClick={handleMessage} className="underline ml-1.5 font-medium">
+                  Message seller
+                </button>
+              )}
+            </p>
           )}
 
           {phone && (
