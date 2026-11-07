@@ -244,6 +244,15 @@ commission (that's a one-line change later — see "Commission" below).
   in `app/api/checkout/initialize/route.js` (the main account's share is
   whatever is left over after the sellers' flat shares).
 
+## Buy buttons on posts
+
+Every feed post that has a product shows **Buy now** and an **Add to cart**
+icon. If one can't be used they stay visible but dimmed, and tapping says
+why (it's the viewer's own product, it's sold out, or the seller hasn't set
+up payouts yet — with a "Message seller" shortcut). Posts with no product
+show **Shop this store** instead. The new-post form defaults to the seller's
+newest product so posts are shoppable by default.
+
 ## Feed order and counts
 
 - **"For you" is shuffled**, not newest-first: every post gets a random
