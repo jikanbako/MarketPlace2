@@ -385,7 +385,7 @@ export default function DashboardPage() {
           {/* Store identity */}
           <div className="px-4 pb-5">
             <div className="flex items-end justify-between gap-3 -mt-9">
-              <div className="relative z-10 w-[72px] h-[72px] rounded-2xl border-4 border-sand bg-gradient-to-br overflow-hidden flex items-center justify-center font-display text-3xl text-ink shrink-0 shadow-sm">
+              <div className="relative z-10 w-[72px] h-[72px] rounded-2xl border-4 border-sand bg-gradient-to-br from-clay/30 to-clay/5 overflow-hidden flex items-center justify-center font-display text-3xl text-ink shrink-0 shadow-sm">
                 {store.logo_url ? (
                   <img src={store.logo_url} alt="" className="w-full h-full object-cover" />
                 ) : (
