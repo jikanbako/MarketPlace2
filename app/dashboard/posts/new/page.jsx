@@ -32,6 +32,9 @@ export default function NewPostPage() {
           .eq('store_id', existingStore.id)
           .order('created_at', { ascending: false });
         setProducts(storeProducts || []);
+        // Default to the newest product, so a post is shoppable unless the
+        // seller deliberately chooses "just an update"
+        if (storeProducts?.length) setProductId(storeProducts[0].id);
       }
     }
     load();
@@ -102,7 +105,7 @@ export default function NewPostPage() {
       <h1 className="font-display text-3xl mb-6">New post</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm mb-1">Product (optional)</label>
+          <label className="block text-sm mb-1">Product (recommended)</label>
           <select
             value={productId}
             onChange={(e) => setProductId(e.target.value)}
@@ -114,9 +117,10 @@ export default function NewPostPage() {
             ))}
           </select>
           <p className="text-xs text-ink/50 mt-1">
-            Link a product to sell directly from this post, or leave it
-            blank for a store update, new-arrivals teaser, or behind-the-
-            scenes content.
+            Posts with a product get <strong>Buy now</strong> and <strong>Add to cart</strong>{' '}
+            buttons, so people can buy straight from the feed. Choose "No
+            product" only for store updates, new-arrival teasers, or
+            behind-the-scenes posts — those show a "Shop this store" button instead.
           </p>
         </div>
         <div>
