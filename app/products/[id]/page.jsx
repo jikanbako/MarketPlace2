@@ -121,7 +121,7 @@ export default function ProductDetailPage() {
   const isOwner = user && product.stores?.owner_id === user.id;
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-12">
+    <div className="bl-product-detail max-w-5xl mx-auto px-4 sm:px-6 py-8">
       <a href="/products" className="text-sm text-ink/60 hover:text-clay">
         ← Back to browse
       </a>
