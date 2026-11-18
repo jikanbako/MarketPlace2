@@ -73,9 +73,9 @@ export default function NavBar() {
   );
 
   return (
-    <nav className={`relative border-b border-ink/10 bg-sand ${hiddenOnMobile}`}>
+    <nav className={`bl-top-nav sticky top-0 z-40 relative border-b border-ink/10 bg-sand ${hiddenOnMobile}`}>
       <div className="flex items-center justify-between px-4 sm:px-6 h-14">
-        <a href="/" className="font-display text-xl shrink-0">BuyLink</a>
+        <a href="/" className="bl-brand-mark font-display text-[25px] font-semibold shrink-0">Buy<span>Link</span></a>
 
         {/* Desktop */}
         <div className="hidden md:flex items-center gap-6 text-sm">
@@ -104,7 +104,7 @@ export default function NavBar() {
       </div>
 
       {menuOpen && (
-        <div className="md:hidden absolute left-0 right-0 top-full z-50 flex flex-col border-b border-ink/10 bg-sand px-4 py-2 shadow-lg">
+        <div className="md:hidden absolute left-0 right-0 top-full z-50 flex flex-col border-b border-ink/10 bg-white/95 px-4 py-2 shadow-lg backdrop-blur-xl">
           {LINKS.map((l) => (
             <a key={l.href} href={l.href} className={`py-3 text-[15px] ${linkClass(l.href)}`}>
               {l.label}
