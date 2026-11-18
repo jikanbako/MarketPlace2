@@ -93,7 +93,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto px-6 py-16 space-y-12">
+    <div className="bl-settings max-w-md mx-auto px-6 py-16 space-y-12">
       <div>
         <h1 className="font-display text-3xl mb-6">Settings</h1>
 
