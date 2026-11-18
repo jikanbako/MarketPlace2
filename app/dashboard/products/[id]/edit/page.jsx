@@ -129,7 +129,7 @@ export default function EditProductPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto px-6 py-16">
+    <div className="bl-editor bl-product-editor max-w-md mx-auto px-6 py-16">
       <h1 className="font-display text-3xl mb-6">Edit product</h1>
       <form onSubmit={handleSave} className="space-y-4">
         <div>
