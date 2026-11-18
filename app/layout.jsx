@@ -9,7 +9,7 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#171310',
+  themeColor: '#B5502F',
 };
 
 export const metadata = {
@@ -49,7 +49,7 @@ export default function RootLayout({ children }) {
         <NavBar />
         <InstallPrompt />
         <BannedBanner />
-        <main className="pb-[calc(4.5rem_+_env(safe-area-inset-bottom,0px))] md:pb-0">{children}</main>
+        <main className="bl-main pb-[calc(4.5rem_+_env(safe-area-inset-bottom,0px))] md:pb-0">{children}</main>
         <BottomNav />
       </body>
     </html>
