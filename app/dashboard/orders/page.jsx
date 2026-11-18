@@ -73,7 +73,7 @@ export default function SellerOrdersPage() {
   const toShip = orders.filter((o) => o.status === 'paid').length;
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-12">
+    <div className="bl-seller-orders max-w-2xl mx-auto px-6 py-12">
       <h1 className="font-display text-3xl mb-1">Orders</h1>
       <p className="text-sm text-ink/60 mb-6">
         {toShip > 0 ? `${toShip} waiting to be shipped` : 'Orders for your store appear here once they\'re paid.'}
