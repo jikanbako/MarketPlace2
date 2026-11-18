@@ -104,7 +104,7 @@ export default function PayoutsPage() {
   const showForm = !payout || editing;
 
   return (
-    <div className="max-w-md mx-auto px-6 py-16">
+    <div className="bl-payouts max-w-md mx-auto px-6 py-16">
       <h1 className="font-display text-3xl mb-2">Payouts</h1>
       <p className="text-ink/60 text-sm mb-6">
         Add the bank account where your sales are paid. Customers pay
