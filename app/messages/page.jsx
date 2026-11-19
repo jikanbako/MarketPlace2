@@ -52,7 +52,7 @@ export default function MessagesInboxPage() {
   }
 
   return (
-    <div className="bl-inbox max-w-2xl mx-auto px-6 py-12">
+    <div className="bl-messages max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
       <h1 className="font-display text-3xl mb-6">Messages</h1>
       <div className="divide-y divide-ink/10 border border-ink/10 rounded-lg overflow-hidden">
         {conversations.map((c) => {
