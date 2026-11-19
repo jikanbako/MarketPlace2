@@ -66,7 +66,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="bl-orders max-w-2xl mx-auto px-6 py-12">
+    <div className="bl-buyer-orders max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
       <h1 className="font-display text-3xl mb-6">My orders</h1>
       {error && <p className="text-clay text-sm mb-3">{error}</p>}
 
