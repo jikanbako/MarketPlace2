@@ -47,7 +47,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto px-6 py-16">
+    <div className="bl-auth max-w-lg mx-auto px-4 sm:px-6 py-12 sm:py-20">
       <h1 className="font-display text-3xl mb-6">Create your account</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
