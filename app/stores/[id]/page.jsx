@@ -103,7 +103,7 @@ export default function StorePage() {
   const isOwner = user && store.owner_id === user.id;
 
   return (
-    <div className="bl-storefront max-w-6xl mx-auto px-4 sm:px-6 py-6">
+    <div className="bl-storefront max-w-7xl mx-auto px-4 sm:px-6 py-6">
       <div className="rounded-3xl overflow-hidden border border-ink/10 bg-white/30 mb-8">
         {/* Cover photo / poster */}
         <div className="relative h-44 sm:h-64 bg-ink">
@@ -195,7 +195,7 @@ export default function StorePage() {
             return (
               <div
                 key={product.id}
-                className="bl-product-card rounded-2xl overflow-hidden border border-ink/10 bg-white/30 flex flex-col"
+                className="rounded-2xl overflow-hidden border border-ink/10 bg-white/30 flex flex-col"
               >
                 <a href={`/products/${product.id}`} className="block relative">
                   <div className="aspect-[4/5] bg-ink/5">
