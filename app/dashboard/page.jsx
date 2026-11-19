@@ -10,7 +10,7 @@ import {
 
 function StatCard({ label, value }) {
   return (
-    <div className="bl-stat-card bg-sand py-3 text-center">
+    <div className="bg-sand py-3 text-center">
       <p className="font-display text-xl leading-none">{Number(value || 0).toLocaleString()}</p>
       <p className="text-[11px] text-ink/50 mt-1.5">{label}</p>
     </div>
@@ -21,7 +21,7 @@ function ActionTile({ href, label, Icon, badge = 0 }) {
   return (
     <a
       href={href}
-      className="bl-action-tile relative flex flex-col items-center gap-2 rounded-2xl border border-ink/10 bg-white/30 py-3.5 active:scale-95 transition-transform"
+      className="relative flex flex-col items-center gap-2 rounded-2xl border border-ink/10 bg-white/30 py-3.5 active:scale-95 transition-transform"
     >
       <span className="w-10 h-10 rounded-full bg-ink/5 text-ink flex items-center justify-center">
         <Icon size={20} />
@@ -311,12 +311,12 @@ export default function DashboardPage() {
   const badge = store ? VERIFICATION_BADGE[store.verification_status] || VERIFICATION_BADGE.none : null;
 
   return (
-    <div className="bl-dashboard max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <div className="bl-dashboard max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
       {/* Header */}
       {store ? (
-        <div className="bl-store-card rounded-3xl overflow-hidden border border-ink/10 bg-white/30">
+        <div className="rounded-3xl overflow-hidden border border-ink/10 bg-white/30">
           {/* Cover photo / poster */}
-          <div className="relative h-44 sm:h-60 lg:h-64 bg-ink">
+          <div className="relative h-44 sm:h-56 bg-ink">
             {store.cover_url ? (
               <button
                 type="button"
@@ -383,7 +383,7 @@ export default function DashboardPage() {
           {coverError && <p className="text-clay text-xs px-4 pt-3">{coverError}</p>}
 
           {/* Store identity */}
-          <div className="px-5 sm:px-7 pb-6">
+          <div className="px-4 pb-5">
             <div className="flex items-end justify-between gap-3 -mt-9">
               <div className="relative z-10 w-[72px] h-[72px] rounded-2xl border-4 border-sand bg-gradient-to-br from-clay/30 to-clay/5 overflow-hidden flex items-center justify-center font-display text-3xl text-ink shrink-0 shadow-sm">
                 {store.logo_url ? (
@@ -448,7 +448,7 @@ export default function DashboardPage() {
       {store && toShip > 0 && (
         <a
           href="/dashboard/orders"
-          className="bl-order-alert flex items-center gap-3 rounded-2xl bg-ink text-sand p-4 sm:p-5"
+          className="flex items-center gap-3 rounded-2xl bg-ink text-sand p-4"
         >
           <span className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center shrink-0">
             <BoxIcon size={20} />
@@ -466,7 +466,7 @@ export default function DashboardPage() {
       {store && !store.payments_enabled && (
         <a
           href="/dashboard/payouts"
-          className="bl-payout-alert flex items-center gap-3 rounded-2xl border border-clay/30 bg-clay/5 p-4 sm:p-5"
+          className="flex items-center gap-3 rounded-2xl border border-clay/30 bg-clay/5 p-4"
         >
           <span className="w-10 h-10 rounded-full bg-clay/15 text-clay flex items-center justify-center shrink-0">
             <BankIcon size={20} />
@@ -483,7 +483,7 @@ export default function DashboardPage() {
 
       {/* Stats — sellers only. One compact card instead of six big boxes. */}
       {store && (
-        <section className="bl-stats grid grid-cols-3 sm:grid-cols-6 gap-px bg-ink/10 border border-ink/10 rounded-2xl overflow-hidden">
+        <section className="grid grid-cols-3 gap-px bg-ink/10 border border-ink/10 rounded-2xl overflow-hidden">
           <StatCard label="Followers" value={stats.followers} />
           <StatCard label="Products" value={stats.products} />
           <StatCard label="Posts" value={stats.posts} />
@@ -494,7 +494,7 @@ export default function DashboardPage() {
       )}
 
       {/* Quick actions */}
-      <section className="bl-quick-actions grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <section className="grid grid-cols-4 gap-2">
         {store ? (
           <>
             <ActionTile href="/dashboard/products/new" label="Product" Icon={PlusIcon} />
@@ -514,9 +514,9 @@ export default function DashboardPage() {
 
       {/* Stock alerts */}
       {store && lowStockProducts.length > 0 && (
-        <section className="bl-panel">
+        <section>
           <h2 className="font-display text-lg mb-3">Stock alerts</h2>
-          <div className="divide-y divide-ink/10 border border-ink/10 rounded-2xl overflow-hidden bg-white/70">
+          <div className="divide-y divide-ink/10 border border-ink/10 rounded-lg overflow-hidden">
             {lowStockProducts.slice(0, 5).map((p) => (
               <div key={p.id} className="flex items-center justify-between px-4 py-3">
                 <div>
@@ -536,7 +536,7 @@ export default function DashboardPage() {
 
       {/* Recent products — with edit/delete */}
       {store && (
-        <section className="bl-panel">
+        <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-display text-lg">Your products</h2>
             <a href="/dashboard/products/new" className="text-xs underline">+ Add</a>
@@ -544,10 +544,10 @@ export default function DashboardPage() {
           {products.length === 0 ? (
             <p className="text-sm text-ink/60">You haven't added any products yet.</p>
           ) : (
-            <div className="divide-y divide-ink/10 border border-ink/10 rounded-2xl overflow-hidden bg-white/70">
+            <div className="divide-y divide-ink/10 border border-ink/10 rounded-lg overflow-hidden">
               {products.slice(0, 8).map((p) => (
                 <div key={p.id} className="flex items-center gap-3 px-4 py-3">
-                  <div className="w-14 h-14 rounded-xl bg-ink/5 overflow-hidden shrink-0">
+                  <div className="w-12 h-12 rounded-md bg-ink/5 overflow-hidden shrink-0">
                     {p.photo_urls?.[0] ? (
                       <img src={p.photo_urls[0]} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -575,7 +575,7 @@ export default function DashboardPage() {
 
       {/* Recent posts */}
       {store && (
-        <section className="bl-panel">
+        <section>
           <h2 className="font-display text-lg mb-3">Your posts</h2>
           {posts.length === 0 ? (
             <p className="text-sm text-ink/60">You haven't posted yet.</p>
@@ -601,7 +601,7 @@ export default function DashboardPage() {
 
       {/* Recent messages */}
       {store && (
-        <section className="bl-panel">
+        <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-display text-lg">Recent messages</h2>
             <a href="/messages" className="text-xs underline">Open inbox</a>
@@ -609,7 +609,7 @@ export default function DashboardPage() {
           {conversations.length === 0 ? (
             <p className="text-sm text-ink/60">No conversations yet.</p>
           ) : (
-            <div className="divide-y divide-ink/10 border border-ink/10 rounded-2xl overflow-hidden bg-white/70">
+            <div className="divide-y divide-ink/10 border border-ink/10 rounded-lg overflow-hidden">
               {conversations.map((c) => (
                 <a key={c.id} href={`/messages/${c.id}`} className="flex items-center justify-between px-4 py-3 hover:bg-ink/5">
                   <div className="min-w-0">
@@ -625,7 +625,7 @@ export default function DashboardPage() {
       )}
 
       {/* Following — everyone */}
-      <section className="bl-panel">
+      <section>
         <h2 className="font-display text-lg mb-3">Following</h2>
         {followedStores.length === 0 ? (
           <div className="text-sm text-ink/60">
@@ -635,7 +635,7 @@ export default function DashboardPage() {
         ) : (
           <div className="grid grid-cols-2 gap-2">
             {followedStores.map((s) => (
-              <a key={s.id} href={`/stores/${s.id}`} className="bl-follow-card border border-ink/10 rounded-2xl p-3 hover:border-ink/30">
+              <a key={s.id} href={`/stores/${s.id}`} className="border border-ink/10 rounded-lg p-3 hover:border-ink/30">
                 <p className="font-medium text-sm">
                   {s.name} {s.verified && <span className="text-moss">✓</span>}
                 </p>
@@ -648,7 +648,7 @@ export default function DashboardPage() {
 
       {/* Become a seller — shown whenever they don't have a store yet */}
       {!store && (
-        <section className="bl-panel border-t border-ink/10 pt-8">
+        <section className="border-t border-ink/10 pt-8">
           <h2 className="font-display text-2xl mb-2">Start selling on BuyLink</h2>
           <p className="text-ink/60 mb-6 text-sm">
             Set up a store to list products, post to the feed, and message buyers.
@@ -718,7 +718,6 @@ export default function DashboardPage() {
           <button
             type="button"
             aria-label="Close"
-            onClick={() => setCoverOpen(false)}
             className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/15 text-white text-xl flex items-center justify-center"
             style={{ top: 'calc(1rem + env(safe-area-inset-top, 0px))' }}
           >
