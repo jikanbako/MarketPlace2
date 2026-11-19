@@ -1,40 +1,47 @@
-# BuyLink UI refresh
+# BuyLink UI redesign — affected files
 
-This refresh keeps BuyLink's existing warm orange-and-cream identity and preserves its current application flows.
+This package contains only files changed or added by the UI redesign. Extract the archive at the root of the existing BuyLink project and allow it to overwrite matching files.
 
-## Brand direction
-- Existing warm page background: `#F6F1E9` (kept)
-- Existing primary clay/orange: `#B5502F` (kept)
-- Existing ink text: `#171310` (kept)
-- Warm white surfaces, subtle borders, soft shadows, and rounded corners create clearer hierarchy.
-- Green, blue, and red remain semantic accents for success, information, and errors rather than competing brand colours.
+## Design direction
+- Retains BuyLink's warm cream page background and orange/clay brand colors.
+- Adds a consistent editorial marketplace style: stronger page hierarchy, larger responsive layouts, warm white panels, softer borders, elevated cards, and consistent form controls.
+- Improves desktop and mobile layouts for the homepage, dashboard, marketplace, product details, store pages, checkout, seller tools, community feed, messaging, account pages, and admin navigation.
+- Existing React page logic, Supabase calls, routes, and payment flows are retained; the changes are presentation-focused.
 
-## Included in this refresh
-- Shared styling for page headings, cards, product tiles, search fields, category controls, form controls, buttons, and message bubbles.
-- Refined top navigation and mobile bottom navigation shared across the app.
-- Responsive seller dashboard layout with store identity, statistics, quick actions, alerts, and content panels.
-- Marketplace product cards with clearer surfaces, hover feedback, and consistent spacing.
-- Improved visual treatment for cart, checkout, account forms, inbox, and conversation surfaces.
-- Fixed the dashboard cover-photo preview's close button so it closes when tapped.
-- Kept the existing feed's immersive layout and media interactions intact.
+## Validation
+A dependency installation attempt timed out in this environment, so a Next.js production build could not be completed here. After applying these files, run `npm ci` (or `npm install`), then `npm run build` and `npm run dev` locally.
 
-## Functionality preserved
-This is a UI-focused update. Existing Supabase queries, authentication, cart operations, checkout and Paystack routes, order handling, product/store operations, messaging, uploads, and admin routes have not been intentionally rewritten.
+## Exact file list
 
-## Verification status
-- Source-level checks completed for the updated dashboard close handler and stylesheet.
-- A production build could not be run in this environment because dependency installation timed out. Run `npm ci` and `npm run build` locally before deploying.
-- No `.env.local` secrets are included. Use your own local environment variables when running the app.
+### Application pages
+- `app/admin/layout.jsx`
+- `app/cart/page.jsx`
+- `app/checkout/page.jsx`
+- `app/dashboard/page.jsx`
+- `app/dashboard/orders/page.jsx`
+- `app/dashboard/payouts/page.jsx`
+- `app/dashboard/posts/new/page.jsx`
+- `app/dashboard/products/new/page.jsx`
+- `app/dashboard/products/[id]/edit/page.jsx`
+- `app/dashboard/store/edit/page.jsx`
+- `app/dashboard/verify/page.jsx`
+- `app/feed/page.jsx`
+- `app/layout.jsx`
+- `app/login/page.jsx`
+- `app/messages/page.jsx`
+- `app/messages/[id]/page.jsx`
+- `app/orders/page.jsx`
+- `app/page.jsx`
+- `app/products/page.jsx`
+- `app/products/[id]/page.jsx`
+- `app/settings/page.jsx`
+- `app/signup/page.jsx`
+- `app/stores/[id]/page.jsx`
 
-## Detailed marketplace pass (continued)
-- Added dedicated page hooks and layouts for the homepage, marketplace browse, product detail, cart, checkout, and public store page.
-- Homepage hero now has a warm editorial panel, clearer calls to action, and a more deliberate featured-product section.
-- Product browse and store product tiles now share consistent image treatment, surface styling, price emphasis, and hover feedback.
-- Product detail uses a wider desktop layout with a focused gallery and purchase information while retaining the existing product, cart, and seller-message handlers.
-- Cart and checkout use clearer summary panels and stronger primary actions; checkout's Paystack submission flow is unchanged.
-- No database schema, Supabase query, API route, payment logic, or authentication flow was intentionally changed in this pass.
+### Shared components and styles
+- `app/globals.css`
+- `components/BottomNav.jsx`
+- `components/NavBar.jsx`
 
-## Seller and community UI pass
-- Added dedicated responsive styling hooks to seller orders, payouts, product creation/editing, post creation, store editing, verification, buyer orders, inbox, conversations, and account settings.
-- Standardized form fields, focus states, action buttons, order cards, inbox rows, and message composer around the existing orange/clay and sand palette.
-- Kept all existing page logic, Supabase queries, storage uploads, RPC calls, and navigation intact; this pass changes presentation classes and shared CSS only.
+### New file
+- `REDESIGN_NOTES.md`
