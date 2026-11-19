@@ -72,7 +72,7 @@ export default function ConversationPage() {
   if (loading) return <p className="px-6 py-16 text-center">Loading…</p>;
 
   return (
-    <div className="bl-conversation max-w-2xl mx-auto px-6 py-8 flex flex-col h-[calc(100vh-80px)]">
+    <div className="bl-chat max-w-5xl mx-auto px-4 sm:px-6 py-6 flex flex-col h-[calc(100vh-80px)]">
       <a href="/messages" className="text-sm text-ink/60 hover:text-clay mb-4">
         ← Inbox
       </a>
