@@ -101,7 +101,7 @@ export default function NewPostPage() {
   }
 
   return (
-    <div className="bl-editor bl-post-editor max-w-md mx-auto px-6 py-16">
+    <div className="bl-editor-page bl-post-editor max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
       <h1 className="font-display text-3xl mb-6">New post</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
