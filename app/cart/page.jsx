@@ -88,7 +88,7 @@ export default function CartPage() {
   const canCheckout = items.some((r) => !unavailable(r));
 
   return (
-    <div className="bl-cart max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+    <div className="bl-cart max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
       <h1 className="font-display text-3xl mb-6">Your cart</h1>
 
       <div className="divide-y divide-ink/10 border border-ink/10 rounded-lg overflow-hidden mb-6">
