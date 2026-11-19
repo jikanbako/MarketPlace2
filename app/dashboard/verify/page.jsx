@@ -106,7 +106,7 @@ export default function VerifyPage() {
   const status = STATUS_LABEL[store.verification_status] ?? null;
 
   return (
-    <div className="bl-editor bl-verify max-w-md mx-auto px-6 py-16">
+    <div className="bl-editor-page bl-verify-page max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
       <h1 className="font-display text-3xl mb-2">Get verified</h1>
       <p className="text-ink/60 text-sm mb-6">
         A verified badge helps buyers trust your store. Submit a government ID
