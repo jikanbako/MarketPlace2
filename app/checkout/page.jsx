@@ -117,7 +117,7 @@ function CheckoutInner() {
   );
 
   return (
-    <div className="bl-checkout max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+    <div className="bl-checkout max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
       <h1 className="font-display text-3xl mb-6">Checkout</h1>
 
       <div className="border border-ink/10 rounded-lg divide-y divide-ink/10 mb-6">
