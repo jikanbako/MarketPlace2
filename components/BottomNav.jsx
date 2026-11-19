@@ -18,7 +18,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="bl-mobile-nav md:hidden fixed bottom-0 left-0 right-0 z-40 bg-sand/95 backdrop-blur border-t border-ink/10 grid grid-cols-5"
+      className="bl-bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-40 bg-sand/95 backdrop-blur border-t border-ink/10 grid grid-cols-5"
       style={{
         height: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -30,7 +30,7 @@ export default function BottomNav() {
         if (primary) {
           return (
             <a key={href} href={href} aria-label={label} className="flex items-center justify-center">
-              <span className="w-12 h-10 rounded-2xl bg-clay text-sand shadow-md flex items-center justify-center shadow-sm active:scale-95 transition-transform">
+              <span className="w-12 h-9 rounded-xl bg-clay text-sand flex items-center justify-center shadow-sm active:scale-95 transition-transform">
                 <Icon size={22} />
               </span>
             </a>
