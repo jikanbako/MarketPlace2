@@ -197,7 +197,7 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow, sou
   const storeInitial = (post.stores?.name || 'B').trim().charAt(0).toUpperCase();
 
   return (
-    <section ref={containerRef} className="relative h-full w-full snap-start snap-always overflow-hidden bg-black">
+    <section ref={containerRef} className="bl-feed relative h-full w-full snap-start snap-always overflow-hidden bg-black">
       {/* Blurred copy of the photo fills the empty space instead of black bars */}
       {!isVideo && (
         <img
