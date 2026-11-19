@@ -112,7 +112,7 @@ export default function ProductsPage() {
   );
 
   return (
-    <div className="bl-marketplace max-w-6xl mx-auto">
+    <div className="bl-marketplace max-w-7xl mx-auto">
       {/* Search + categories stay put while you scroll the grid */}
       <div className="sticky top-0 z-10 bg-sand/95 backdrop-blur px-4 sm:px-6 pt-4 pb-3 border-b border-ink/5">
         <div className="relative">
@@ -168,7 +168,7 @@ export default function ProductsPage() {
               return (
                 <div
                   key={product.id}
-                  className="bl-product-card rounded-2xl overflow-hidden border border-ink/10 bg-white/30 flex flex-col"
+                  className="rounded-2xl overflow-hidden border border-ink/10 bg-white/30 flex flex-col"
                 >
                   <a href={`/products/${product.id}`} className="block relative">
                     <div className="aspect-[4/5] bg-ink/5">
