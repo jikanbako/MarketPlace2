@@ -9,7 +9,7 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#B5502F',
+  themeColor: '#171310',
 };
 
 export const metadata = {
@@ -44,12 +44,12 @@ export default function RootLayout({ children }) {
           />
         )}
       </head>
-      <body className="font-body min-h-screen">
+      <body className="font-body min-h-screen bl-app-shell">
         <RegisterServiceWorker />
         <NavBar />
         <InstallPrompt />
         <BannedBanner />
-        <main className="bl-main pb-[calc(4.5rem_+_env(safe-area-inset-bottom,0px))] md:pb-0">{children}</main>
+        <main className="pb-[calc(4.5rem_+_env(safe-area-inset-bottom,0px))] md:pb-0">{children}</main>
         <BottomNav />
       </body>
     </html>

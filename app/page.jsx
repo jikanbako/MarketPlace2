@@ -32,7 +32,7 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="bl-home max-w-6xl mx-auto">
+    <div className="bl-home max-w-7xl mx-auto">
       {/* Hero */}
       <section className="px-5 pt-10 pb-8">
         <p className="text-xs uppercase tracking-widest text-clay font-medium mb-3">
