@@ -197,7 +197,7 @@ function PostCard({ post, user, onOpenComments, isFollowing, onToggleFollow, sou
   const storeInitial = (post.stores?.name || 'B').trim().charAt(0).toUpperCase();
 
   return (
-    <section ref={containerRef} className="bl-feed relative h-full w-full snap-start snap-always overflow-hidden bg-black">
+    <section ref={containerRef} className="relative h-full w-full snap-start snap-always overflow-hidden bg-black">
       {/* Blurred copy of the photo fills the empty space instead of black bars */}
       {!isVideo && (
         <img
@@ -687,7 +687,7 @@ export default function FeedPage() {
       {/* Pinned between the top of the screen and the bottom tab bar. Using
           top/bottom anchors (not 100vh) means it always matches the area
           you can actually see, even with the browser's address bar showing. */}
-      <div className="fixed inset-x-0 top-0 bottom-[calc(3.5rem_+_env(safe-area-inset-bottom,0px))] md:top-[57px] md:bottom-0 z-20 bg-black text-white">
+      <div className="bl-feed fixed inset-x-0 top-0 bottom-[calc(3.5rem_+_env(safe-area-inset-bottom,0px))] md:top-[57px] md:bottom-0 z-20 bg-black text-white">
         <FeedHeader tab={tab} setTab={handleTab} />
         {body}
       </div>
