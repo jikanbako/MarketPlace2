@@ -379,3 +379,100 @@ main button:disabled { cursor: not-allowed; }
 .bl-stock-meter i { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,#f2a12b,#e76a19); }
 @media(max-width:900px) { .bl-dashboard-pair { grid-template-columns:1fr 1fr; } }
 @media(max-width:620px) { .bl-dashboard-pair { grid-template-columns:1fr; } .bl-dashboard-order-row { gap:8px; } .bl-order-thumb { width:42px; flex-basis:42px; } .bl-stock-meter { width:50px; flex-basis:50px; } }
+
+/* --------------------------------------------------------------------------
+   BuyLink reference-system rollout: customer, seller and community pages.
+   These styles deliberately preserve page behavior and existing data actions.
+   -------------------------------------------------------------------------- */
+:root {
+  --bl-radius-lg: 24px;
+  --bl-shadow-card: 0 10px 30px rgba(58, 38, 22, .055);
+  --bl-shadow-hover: 0 16px 36px rgba(58, 38, 22, .095);
+}
+
+.bl-marketplace { padding-bottom: 42px; }
+.bl-marketplace > .sticky { padding-top: 20px; padding-bottom: 16px; }
+.bl-marketplace .grid { gap: 18px; padding: 18px 16px 28px; }
+.bl-marketplace .bl-product-card { border: 1px solid rgba(23,19,16,.075); border-radius: 22px; overflow: hidden; }
+.bl-marketplace .bl-product-card > a:first-child { aspect-ratio: 1 / .88; background: #eee5da; }
+.bl-marketplace .bl-product-card > a:first-child img { width: 100%; height: 100%; object-fit: cover; }
+.bl-marketplace .bl-product-card > div:last-child { padding: 15px 16px 17px; }
+.bl-marketplace .bl-product-card button { border-radius: 12px; min-height: 42px; }
+.bl-marketplace button[class*="bg-ink"] { background: var(--bl-orange); color: white; border-color: var(--bl-orange); }
+.bl-marketplace button[class*="bg-ink"]:hover { background: #9e4529; }
+
+/* Product detail: gallery left, purchase information right on desktop. */
+.bl-product-detail { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(300px,.95fr); column-gap: clamp(24px,4vw,54px); row-gap: 10px; padding-top: 28px; }
+.bl-product-detail > a:first-child { grid-column: 1 / -1; margin-bottom: 8px; }
+.bl-product-detail > div:nth-child(2), .bl-product-detail > div:nth-child(3) { grid-column: 1; }
+.bl-product-detail > h1, .bl-product-detail > a:not(:first-child), .bl-product-detail > p, .bl-product-detail > div:nth-child(n+4) { grid-column: 2; }
+.bl-product-detail > div:nth-child(2) { grid-row: 2 / span 8; }
+.bl-product-detail > h1 { align-self: end; font-size: clamp(2rem,4vw,3.1rem); line-height: 1.05; margin-top: 4px; }
+.bl-product-detail > a:not(:first-child) { align-self: start; }
+.bl-product-detail > p.text-clay { font-size: 1.8rem; font-weight: 700; color: var(--bl-orange); }
+.bl-product-detail > div:nth-child(2) > div:first-child { border-radius: 24px; overflow: hidden; background: #eee5da; }
+.bl-product-detail > div:nth-child(2) button { border-radius: 12px; overflow: hidden; }
+.bl-product-detail button[class*="bg-clay"] { background: var(--bl-orange); color: white; box-shadow: 0 8px 20px rgba(181,80,47,.17); }
+
+/* Storefront identity and catalog. */
+.bl-storefront { padding-top: 28px; padding-bottom: 48px; }
+.bl-storefront > div:first-child { overflow: hidden; border: 1px solid var(--bl-line); border-radius: 28px; background: #fffefc; box-shadow: var(--bl-shadow-card); }
+.bl-storefront > div:first-child > div:first-child { min-height: 230px; }
+.bl-storefront > div:first-child > div:last-child { padding: 22px clamp(18px,3vw,34px); }
+.bl-storefront h1 { font-size: clamp(2rem,4vw,2.8rem); line-height: 1.05; }
+.bl-storefront .grid { gap: 18px; }
+
+/* Cart and checkout use clean elevated cards and clear totals. */
+.bl-cart, .bl-checkout { padding-top: clamp(28px,5vw,52px); padding-bottom: 56px; }
+.bl-cart > h1, .bl-checkout > h1 { font-size: clamp(2.2rem,5vw,3.4rem); margin-bottom: 24px; }
+.bl-cart > div[class*="divide-y"], .bl-checkout > div[class*="divide-y"] { border: 1px solid var(--bl-line); border-radius: 22px; overflow: hidden; background: #fffefc; box-shadow: var(--bl-shadow-card); }
+.bl-cart > div[class*="divide-y"] > div { padding: 18px; align-items: center; }
+.bl-cart > div[class*="divide-y"] img { border-radius: 13px; }
+.bl-cart a[href^="/checkout"], .bl-checkout button[type="submit"] { background: var(--bl-orange); color: white; border-radius: 14px; min-height: 50px; font-weight: 700; box-shadow: 0 8px 20px rgba(181,80,47,.17); }
+.bl-cart a[href^="/checkout"]:hover, .bl-checkout button[type="submit"]:hover { background: #9e4529; }
+.bl-checkout > div[class*="divide-y"] > div { padding: 16px 20px; }
+.bl-checkout form { border: 1px solid var(--bl-line); border-radius: 24px; background: #fffefc; padding: clamp(18px,4vw,30px); box-shadow: var(--bl-shadow-card); }
+
+/* Seller operations: orders, payouts and product/store editors. */
+.bl-seller-orders, .bl-payouts, .bl-editor, .bl-orders, .bl-settings, .bl-inbox { padding-top: clamp(28px,5vw,52px); padding-bottom: 56px; }
+.bl-seller-orders > h1, .bl-payouts > h1, .bl-editor > h1, .bl-orders > h1, .bl-settings h1, .bl-inbox > h1 { font-size: clamp(2rem,4.5vw,3rem); line-height: 1.08; letter-spacing: -.05em; }
+.bl-seller-orders > div[class*="space-y"] > div, .bl-orders > div[class*="space-y"] > div, .bl-payouts > div[class*="border"] { border: 1px solid var(--bl-line); border-radius: 20px; background: #fffefc; padding: 18px; box-shadow: var(--bl-shadow-card); }
+.bl-seller-orders button, .bl-payouts button, .bl-editor button { border-radius: 13px; min-height: 44px; font-weight: 600; }
+.bl-seller-orders button[class*="bg-ink"], .bl-payouts button[type="submit"], .bl-editor button[type="submit"] { background: var(--bl-orange); color: white; box-shadow: 0 7px 18px rgba(181,80,47,.15); }
+.bl-seller-orders button[class*="bg-ink"]:hover, .bl-payouts button[type="submit"]:hover, .bl-editor button[type="submit"]:hover { background: #9e4529; }
+.bl-editor form { padding: clamp(18px,4vw,28px); border: 1px solid var(--bl-line); border-radius: 24px; background: #fffefc; box-shadow: var(--bl-shadow-card); }
+.bl-editor form label { color: #51463e; font-weight: 600; }
+.bl-editor form input, .bl-editor form textarea, .bl-editor form select { width: 100%; min-height: 46px; padding: 10px 13px; border: 1px solid rgba(23,19,16,.14); border-radius: 12px; background: #fff; }
+.bl-editor form textarea { min-height: 110px; }
+.bl-payouts form { padding: 20px; border: 1px solid var(--bl-line); border-radius: 22px; background: #fffefc; box-shadow: var(--bl-shadow-card); }
+
+/* Inbox and conversation screens. */
+.bl-inbox > div[class*="divide-y"] { overflow: hidden; border: 1px solid var(--bl-line); border-radius: 22px; background: #fffefc; box-shadow: var(--bl-shadow-card); }
+.bl-inbox > div[class*="divide-y"] > a { padding: 17px 19px; border-bottom: 1px solid rgba(23,19,16,.06); }
+.bl-inbox > div[class*="divide-y"] > a:hover { background: #fff5eb; }
+.bl-conversation { border: 1px solid var(--bl-line); border-radius: 22px; background: rgba(255,254,252,.94); box-shadow: var(--bl-shadow-card); overflow: hidden; }
+.bl-conversation form, .bl-conversation > div:last-child { background: #fffefc; }
+.bl-conversation button[type="submit"] { background: var(--bl-orange); color: white; border-radius: 13px; }
+.bl-conversation .max-w-\[75\%\] { padding: 11px 14px; box-shadow: 0 3px 10px rgba(23,19,16,.035); }
+
+/* Account settings panels. */
+.bl-settings section { padding: 19px; border: 1px solid var(--bl-line); border-radius: 21px; background: #fffefc; box-shadow: var(--bl-shadow-card); }
+.bl-settings section h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; }
+.bl-settings section button { border-radius: 12px; }
+
+/* Feed remains immersive/dark by design, while its surrounding app chrome
+   and bottom navigation keep the same BuyLink orange/cream system. */
+.bl-feed { background: #171310; }
+
+@media (max-width: 767px) {
+  .bl-product-detail { display: block; padding: 20px 16px 36px; }
+  .bl-product-detail > div:nth-child(2) { margin-top: 12px; margin-bottom: 22px; }
+  .bl-product-detail > h1 { margin-top: 0; font-size: 2rem; }
+  .bl-storefront > div:first-child { border-radius: 21px; }
+  .bl-storefront > div:first-child > div:first-child { min-height: 175px; }
+  .bl-marketplace .grid { gap: 12px; padding: 14px 12px 28px; }
+  .bl-marketplace .bl-product-card { border-radius: 16px; }
+  .bl-cart > div[class*="divide-y"] > div { padding: 13px; }
+  .bl-seller-orders, .bl-payouts, .bl-editor, .bl-orders, .bl-settings, .bl-inbox { padding-left: 16px; padding-right: 16px; }
+  .bl-conversation { border-radius: 0; border-left: 0; border-right: 0; }
+}
