@@ -10,7 +10,7 @@ import {
 
 function StatCard({ label, value }) {
   return (
-    <div className="bg-sand py-3 text-center">
+    <div className="bl-stat-card bg-sand py-3 text-center">
       <p className="font-display text-xl leading-none">{Number(value || 0).toLocaleString()}</p>
       <p className="text-[11px] text-ink/50 mt-1.5">{label}</p>
     </div>
@@ -21,7 +21,7 @@ function ActionTile({ href, label, Icon, badge = 0 }) {
   return (
     <a
       href={href}
-      className="relative flex flex-col items-center gap-2 rounded-2xl border border-ink/10 bg-white/30 py-3.5 active:scale-95 transition-transform"
+      className="bl-action-tile relative flex flex-col items-center gap-2 rounded-2xl border border-ink/10 bg-white/30 py-3.5 active:scale-95 transition-transform"
     >
       <span className="w-10 h-10 rounded-full bg-ink/5 text-ink flex items-center justify-center">
         <Icon size={20} />
@@ -48,6 +48,7 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState(null);
   const [store, setStore] = useState(null);
   const [products, setProducts] = useState([]);
+  const [recentOrders, setRecentOrders] = useState([]);
   const [posts, setPosts] = useState([]);
   const [conversations, setConversations] = useState([]);
   const [followedStores, setFollowedStores] = useState([]);
@@ -121,7 +122,7 @@ export default function DashboardPage() {
   }
 
   async function loadSellerData(userId, storeId) {
-    const [followersRes, productsRes, postsRes, convosRes, toShipRes, postTotalsRes, chatsCountRes] = await Promise.all([
+    const [followersRes, productsRes, postsRes, convosRes, toShipRes, postTotalsRes, chatsCountRes, recentOrdersRes] = await Promise.all([
       supabase.from('follows').select('*', { count: 'exact', head: true }).eq('followed_store_id', storeId),
       supabase.from('products').select('*').eq('store_id', storeId).order('created_at', { ascending: false }),
       supabase.from('posts').select('*').eq('store_id', storeId).order('created_at', { ascending: false }).limit(6),
@@ -147,6 +148,12 @@ export default function DashboardPage() {
         .from('conversations')
         .select('*', { count: 'exact', head: true })
         .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`),
+      supabase
+        .from('orders')
+        .select('id, status, created_at, subtotal_kobo, order_items(id, title, unit_price_kobo, quantity)')
+        .eq('store_id', storeId)
+        .order('created_at', { ascending: false })
+        .limit(3),
     ]);
     setToShip(toShipRes.count || 0);
 
@@ -196,6 +203,7 @@ export default function DashboardPage() {
       chats: chatsCountRes.count ?? convoRows.length,
     });
     setProducts(productRows);
+    setRecentOrders(recentOrdersRes.data || []);
     setPosts(postRows);
     setConversations(enrichedConvos);
   }
@@ -311,12 +319,39 @@ export default function DashboardPage() {
   const badge = store ? VERIFICATION_BADGE[store.verification_status] || VERIFICATION_BADGE.none : null;
 
   return (
-    <div className="bl-dashboard max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
-      {/* Header */}
+    <div className="bl-dashboard-shell">
+      <aside className="bl-dashboard-sidebar" aria-label="Seller navigation">
+        <div className="bl-sidebar-label">SELLER WORKSPACE</div>
+        <a href="/dashboard" className="bl-side-link is-active"><span>▦</span> Dashboard</a>
+        <a href={store ? `/stores/${store.id}` : '/dashboard/store/edit'} className="bl-side-link"><span>▣</span> My Store</a>
+        <a href="/dashboard/products/new" className="bl-side-link"><span>⬡</span> Products</a>
+        <a href="/dashboard/orders" className="bl-side-link"><span>🛒</span> Orders</a>
+        <a href="/dashboard/posts/new" className="bl-side-link"><span>▶</span> Posts</a>
+        <a href="/dashboard/payouts" className="bl-side-link"><span>▤</span> Payouts</a>
+        <a href="/dashboard/verify" className="bl-side-link"><span>✓</span> Verification</a>
+        <a href="/settings" className="bl-side-link"><span>⚙</span> Settings</a>
+        <div className="bl-sidebar-promo">
+          <div className="bl-promo-art">✦　◆　✧</div>
+          <h3>Grow Your Store</h3>
+          <p>Share your store and reach more customers!</p>
+          <a href="/dashboard/posts/new">Create a Post</a>
+        </div>
+      </aside>
+      <div className="bl-dashboard-main">
+        <div className="bl-dashboard-heading">
+          <div>
+            <p className="bl-eyebrow">YOUR BUSINESS AT A GLANCE</p>
+            <h1>{store ? 'Good morning, seller' : `Welcome${profile?.full_name ? `, ${profile.full_name}` : ''}`}</h1>
+            <p>{store ? "Here’s what’s happening with your store today." : 'Discover stores, products, and people worth following.'}</p>
+          </div>
+          <a className="bl-heading-cta" href={store ? '/dashboard/products/new' : '/products'}>{store ? '+ Add product' : 'Explore marketplace'}</a>
+        </div>
+      <div className="bl-dashboard max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
+      {/* Store banner and identity */}
       {store ? (
-        <div className="rounded-3xl overflow-hidden border border-ink/10 bg-white/30">
+        <div className="bl-store-card rounded-3xl overflow-hidden border border-ink/10 bg-white/30">
           {/* Cover photo / poster */}
-          <div className="relative h-44 sm:h-56 bg-ink">
+          <div className="relative h-44 sm:h-60 lg:h-64 bg-ink">
             {store.cover_url ? (
               <button
                 type="button"
@@ -383,7 +418,7 @@ export default function DashboardPage() {
           {coverError && <p className="text-clay text-xs px-4 pt-3">{coverError}</p>}
 
           {/* Store identity */}
-          <div className="px-4 pb-5">
+          <div className="bl-store-identity px-5 sm:px-7 pb-6">
             <div className="flex items-end justify-between gap-3 -mt-9">
               <div className="relative z-10 w-[72px] h-[72px] rounded-2xl border-4 border-sand bg-gradient-to-br from-clay/30 to-clay/5 overflow-hidden flex items-center justify-center font-display text-3xl text-ink shrink-0 shadow-sm">
                 {store.logo_url ? (
@@ -448,7 +483,7 @@ export default function DashboardPage() {
       {store && toShip > 0 && (
         <a
           href="/dashboard/orders"
-          className="flex items-center gap-3 rounded-2xl bg-ink text-sand p-4"
+          className="bl-order-alert flex items-center gap-3 rounded-2xl bg-ink text-sand p-4 sm:p-5"
         >
           <span className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center shrink-0">
             <BoxIcon size={20} />
@@ -466,7 +501,7 @@ export default function DashboardPage() {
       {store && !store.payments_enabled && (
         <a
           href="/dashboard/payouts"
-          className="flex items-center gap-3 rounded-2xl border border-clay/30 bg-clay/5 p-4"
+          className="bl-payout-alert flex items-center gap-3 rounded-2xl border border-clay/30 bg-clay/5 p-4 sm:p-5"
         >
           <span className="w-10 h-10 rounded-full bg-clay/15 text-clay flex items-center justify-center shrink-0">
             <BankIcon size={20} />
@@ -483,7 +518,7 @@ export default function DashboardPage() {
 
       {/* Stats — sellers only. One compact card instead of six big boxes. */}
       {store && (
-        <section className="grid grid-cols-3 gap-px bg-ink/10 border border-ink/10 rounded-2xl overflow-hidden">
+        <section className="bl-stats grid grid-cols-3 sm:grid-cols-6 gap-px bg-ink/10 border border-ink/10 rounded-2xl overflow-hidden">
           <StatCard label="Followers" value={stats.followers} />
           <StatCard label="Products" value={stats.products} />
           <StatCard label="Posts" value={stats.posts} />
@@ -494,7 +529,7 @@ export default function DashboardPage() {
       )}
 
       {/* Quick actions */}
-      <section className="grid grid-cols-4 gap-2">
+      <section className="bl-quick-actions grid grid-cols-2 sm:grid-cols-4 gap-3">
         {store ? (
           <>
             <ActionTile href="/dashboard/products/new" label="Product" Icon={PlusIcon} />
@@ -512,31 +547,56 @@ export default function DashboardPage() {
         )}
       </section>
 
-      {/* Stock alerts */}
-      {store && lowStockProducts.length > 0 && (
-        <section>
-          <h2 className="font-display text-lg mb-3">Stock alerts</h2>
-          <div className="divide-y divide-ink/10 border border-ink/10 rounded-lg overflow-hidden">
-            {lowStockProducts.slice(0, 5).map((p) => (
-              <div key={p.id} className="flex items-center justify-between px-4 py-3">
-                <div>
-                  <p className="font-medium text-sm">{p.title}</p>
-                  <p className="text-xs text-clay">
-                    {Number(p.stock_qty) <= 0 ? 'Out of stock' : `${p.stock_qty} left`}
-                  </p>
-                </div>
-                <a href={`/dashboard/products/${p.id}/edit`} className="text-xs underline">
-                  Update stock
-                </a>
+      {store && (
+        <div className="bl-dashboard-pair">
+          <section className="bl-panel">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-display text-lg">Recent Orders</h2>
+              <a href="/dashboard/orders" className="text-xs text-clay font-semibold">View all →</a>
+            </div>
+            {recentOrders.length === 0 ? (
+              <p className="text-sm text-ink/55 py-5">Your paid orders will appear here.</p>
+            ) : (
+              <div className="bl-dashboard-order-list">
+                {recentOrders.map((order) => (
+                  <div key={order.id} className="bl-dashboard-order-row">
+                    <div className="bl-order-thumb">▧</div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{order.order_items?.[0]?.title || 'Customer order'}{order.order_items?.length > 1 ? ` +${order.order_items.length - 1} more` : ''}</p>
+                      <p className="text-xs text-ink/50">#{String(order.id).slice(0, 8).toUpperCase()}</p>
+                    </div>
+                    <strong className="text-sm">₦{(Number(order.subtotal_kobo || 0) / 100).toLocaleString()}</strong>
+                    <span className={`bl-order-status status-${order.status}`}>{order.status}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </section>
+            )}
+          </section>
+          <section className="bl-panel">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-display text-lg">Low Stock Products</h2>
+              <a href="/dashboard/products/new" className="text-xs text-clay font-semibold">Manage →</a>
+            </div>
+            {lowStockProducts.length === 0 ? (
+              <p className="text-sm text-ink/55 py-5">Your products are well stocked.</p>
+            ) : (
+              <div className="bl-low-stock-list">
+                {lowStockProducts.slice(0, 4).map((product) => (
+                  <a key={product.id} href={`/dashboard/products/${product.id}/edit`} className="bl-low-stock-row">
+                    <div className="bl-stock-thumb">{product.photo_urls?.[0] ? <img src={product.photo_urls[0]} alt="" /> : '▧'}</div>
+                    <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{product.title}</p><p className="text-xs text-clay">{Number(product.stock_qty) <= 0 ? 'Out of stock' : `Only ${product.stock_qty} left`}</p></div>
+                    <span className="bl-stock-meter"><i style={{ width: `${Math.max(8, Math.min(100, Number(product.stock_qty || 0) * 14))}%` }} /></span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
       )}
 
       {/* Recent products — with edit/delete */}
       {store && (
-        <section>
+        <section className="bl-panel">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-display text-lg">Your products</h2>
             <a href="/dashboard/products/new" className="text-xs underline">+ Add</a>
@@ -544,10 +604,10 @@ export default function DashboardPage() {
           {products.length === 0 ? (
             <p className="text-sm text-ink/60">You haven't added any products yet.</p>
           ) : (
-            <div className="divide-y divide-ink/10 border border-ink/10 rounded-lg overflow-hidden">
+            <div className="divide-y divide-ink/10 border border-ink/10 rounded-2xl overflow-hidden bg-white/70">
               {products.slice(0, 8).map((p) => (
                 <div key={p.id} className="flex items-center gap-3 px-4 py-3">
-                  <div className="w-12 h-12 rounded-md bg-ink/5 overflow-hidden shrink-0">
+                  <div className="w-14 h-14 rounded-xl bg-ink/5 overflow-hidden shrink-0">
                     {p.photo_urls?.[0] ? (
                       <img src={p.photo_urls[0]} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -575,7 +635,7 @@ export default function DashboardPage() {
 
       {/* Recent posts */}
       {store && (
-        <section>
+        <section className="bl-panel">
           <h2 className="font-display text-lg mb-3">Your posts</h2>
           {posts.length === 0 ? (
             <p className="text-sm text-ink/60">You haven't posted yet.</p>
@@ -601,7 +661,7 @@ export default function DashboardPage() {
 
       {/* Recent messages */}
       {store && (
-        <section>
+        <section className="bl-panel">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-display text-lg">Recent messages</h2>
             <a href="/messages" className="text-xs underline">Open inbox</a>
@@ -609,7 +669,7 @@ export default function DashboardPage() {
           {conversations.length === 0 ? (
             <p className="text-sm text-ink/60">No conversations yet.</p>
           ) : (
-            <div className="divide-y divide-ink/10 border border-ink/10 rounded-lg overflow-hidden">
+            <div className="divide-y divide-ink/10 border border-ink/10 rounded-2xl overflow-hidden bg-white/70">
               {conversations.map((c) => (
                 <a key={c.id} href={`/messages/${c.id}`} className="flex items-center justify-between px-4 py-3 hover:bg-ink/5">
                   <div className="min-w-0">
@@ -625,7 +685,7 @@ export default function DashboardPage() {
       )}
 
       {/* Following — everyone */}
-      <section>
+      <section className="bl-panel">
         <h2 className="font-display text-lg mb-3">Following</h2>
         {followedStores.length === 0 ? (
           <div className="text-sm text-ink/60">
@@ -635,7 +695,7 @@ export default function DashboardPage() {
         ) : (
           <div className="grid grid-cols-2 gap-2">
             {followedStores.map((s) => (
-              <a key={s.id} href={`/stores/${s.id}`} className="border border-ink/10 rounded-lg p-3 hover:border-ink/30">
+              <a key={s.id} href={`/stores/${s.id}`} className="bl-follow-card border border-ink/10 rounded-2xl p-3 hover:border-ink/30">
                 <p className="font-medium text-sm">
                   {s.name} {s.verified && <span className="text-moss">✓</span>}
                 </p>
@@ -648,7 +708,7 @@ export default function DashboardPage() {
 
       {/* Become a seller — shown whenever they don't have a store yet */}
       {!store && (
-        <section className="border-t border-ink/10 pt-8">
+        <section className="bl-panel border-t border-ink/10 pt-8">
           <h2 className="font-display text-2xl mb-2">Start selling on BuyLink</h2>
           <p className="text-ink/60 mb-6 text-sm">
             Set up a store to list products, post to the feed, and message buyers.
@@ -718,6 +778,7 @@ export default function DashboardPage() {
           <button
             type="button"
             aria-label="Close"
+            onClick={() => setCoverOpen(false)}
             className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/15 text-white text-xl flex items-center justify-center"
             style={{ top: 'calc(1rem + env(safe-area-inset-top, 0px))' }}
           >
@@ -725,6 +786,8 @@ export default function DashboardPage() {
           </button>
         </div>
       )}
+      </div>
+      </div>
     </div>
   );
 }
